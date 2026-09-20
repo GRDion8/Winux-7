@@ -124,20 +124,21 @@ Microsoft fonts are not bundled. The optional font-import instructions are in [P
 
 This is the most convenient path for end users after the image has been built and tested. The custom live image includes the graphical dependencies and starts the wizard on console 1. It remains an **online installer**, not a self-contained offline OS image.
 
-Use an Arch Linux build machine or disposable Arch VM with adequate free storage (plan for tens of GiB) and internet access:
+Use an installed x86_64 Arch Linux system or Arch VM with internet and at least **30 GiB free in `/var/tmp`**. Do not build inside the live ISO. With Git installed:
 
 ```bash
-sudo pacman -Syu --needed archiso git
 git clone https://github.com/GRDion8/Winux-7.git
 cd Winux-7
-sudo bash build-iso.sh "$PWD/iso-output"
+bash build-iso.sh
 ```
 
-The script copies the system's current `releng` profile into a unique build directory under `/var/tmp`, includes Setup and its graphical dependencies, and calls `mkarchiso`. It never flashes a disk. Build artifacts are retained for troubleshooting, and the final ISO goes in `iso-output`.
+The script requests sudo itself. If Archiso is missing, it installs it with a normal package-manager upgrade confirmation. After that, building is automatic. An optional output directory can be supplied: `bash build-iso.sh /path/to/output`.
+
+The script copies the system's current `releng` profile into a unique build directory under `/var/tmp`, includes Setup and its graphical dependencies, and calls `mkarchiso`. It never flashes a disk. Build artifacts are retained for troubleshooting, and the final ISO and matching `.iso.sha256` file go in `iso-output`. The script prints their exact paths and retains `build.log` in its build directory on failure. Older same-name images are kept. Verify the output with `sha256sum -c NAME.iso.sha256` from that directory.
 
 Use a display resolution of at least 1024×768. Test that ISO in a VM before copying it to installation media. Choose **Network settings** if you need Wi-Fi. The custom image uses NetworkManager in the live session; the stock ISO path retains its existing network stack.
 
-No prebuilt ISO, signed release, or checksum manifest is supplied. A user has successfully built and booted the custom ISO; full installation validation is still ongoing. Archiso package changes can require updates to the builder.
+No prebuilt ISO or signed release is supplied; the builder generates a SHA-256 checksum for each image it produces. A user has successfully built and booted the custom ISO; full installation validation is still ongoing. Archiso package changes can require updates to the builder.
 
 ## Updating Setup on an existing live ISO
 

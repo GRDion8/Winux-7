@@ -52,3 +52,7 @@ VM acceptance: boot the updated ISO in UEFI, install to disposable NVMe storage,
 57 automated tests pass, including X11 default selection, existing autologin/theme preservation, rejection of missing X11 sessions, TMOG checksum/cache handling, exact wallpaper copying, localized Recycle Bin path, one-time per-user Wine setup and retry on failure. The preview flow tests both No and Yes at the formatting prompt, never invoking the real engine. All six pre-install pages fit at 1024×768. The wallpaper preview was visually inspected. TMOG 0.1.4 was downloaded and matched the publisher’s SHA-256; it was not executed on the development host.
 
 Still required in the test VM: restart into the new default X11 session, confirm the wallpaper survives Aero setup, open the Recycle Bin, Firefox and native TMOG, and launch a representative supported Windows application through Wine. App/menu integration and first-login commands are mocked in the automated tests; no live user configuration was modified here.
+
+## Automatic ISO builder
+
+`python build_iso_tests.py`: three tests pass (help, argument validation, and a simulated complete build using fake Archiso tools). The simulated build verifies bundled desktop assets, checksum output and preservation of an existing same-name ISO. Shell syntax validation passes. The revised builder has not been used for a full ISO build in this development environment.

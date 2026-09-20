@@ -37,6 +37,16 @@ bash launch.sh
 
 Setup installs its graphical dependencies into the temporary live environment. This requires enough free live-overlay space. See the tutorial for Wi-Fi and custom ISO instructions.
 
+## Build the ISO
+
+From this project folder on an installed x86_64 Arch Linux system:
+
+```bash
+bash build-iso.sh
+```
+
+The script requests sudo, installs missing Archiso tools after the package manager’s confirmation, and builds the image automatically. Allow at least 30 GiB free in `/var/tmp`. The ISO and SHA-256 checksum are saved in `iso-output/`; their paths are printed when finished. Do not run the builder inside the live ISO.
+
 ## What you get
 
 - Native local graphical wizard with a blue Aero-style background and familiar setup sequence.
