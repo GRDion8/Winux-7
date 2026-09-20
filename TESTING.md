@@ -4,23 +4,23 @@ This is a development installer, not a verified production release. No destructi
 
 ## Automated checks
 
-Run `python tests.py`. Tests use fake disk metadata and mocked commands; they never call the actual partitioning or installation tools. They cover validation, drive-name handling, mounted/live media exclusion, swap and LVM exclusion, disk identity changes, non-live refusal, version mismatch before partitioning, password stdin/log handling, BIOS and UEFI command flows, failure cleanup, and no success after failed unmount.
+Run `python tests.py`. Most tests use fake disk metadata and mocked commands. One optional regression test uses filesystem tools on a temporary regular file to convert an old SquashFS image to FAT32; it never uses a block device, mounts anything, or needs root. They cover validation, drive-name handling, mounted/live media exclusion, swap and LVM exclusion, disk identity changes, non-live refusal, version mismatch before partitioning, password stdin/log handling, BIOS and UEFI command flows, failure cleanup, and no success after failed unmount.
 
 Run `python gui_test.py` under a graphical display or Xvfb for a preview-only wizard flow. Python compilation and Bash syntax checks cover the shipped entrypoints. These checks do not prove that Arch package downloads, GRUB boot, upstream builds, firmware or hardware work.
 
 ## Results for this development version
 
-- 25 backend tests: passed using fake disks and mocked subprocesses.
+- 29 backend/regression tests: passed, including a real temporary-file SquashFS-to-FAT32 conversion.
 - Full preview wizard flow: passed in an isolated Xvfb display with Tk.
 - Wi-Fi dialog scan/result rendering: passed with mocked network results; no real connection was attempted.
 - All wizard pages fit at 1024×768 by geometry checks.
 - Python compilation and Bash syntax checks: passed.
 - Existing post-install script: byte-for-byte unchanged.
-- Custom ISO build, actual disk installation, reboot, and Aero source build: **not performed**.
+- The user successfully built and booted the custom ISO in VMware. Their first installation reached partition formatting, then failed because the EFI mount attempted SquashFS instead of FAT32. The filesystem preparation/mount fix has regression coverage, but the complete install, reboot and Aero build remain unverified.
 
 ## Required before a production release
 
-- [ ] Build the custom ISO with the current Archiso releng profile.
+- [x] User reported successfully building the custom ISO.
 - [ ] Boot custom ISO and confirm automatic GUI start, keyboard input and networking.
 - [ ] Launch from the official stock ISO after connecting with iwctl.
 - [ ] Complete an Aero installation onto a disposable UEFI virtual disk.
@@ -36,3 +36,7 @@ Run `python gui_test.py` under a graphical display or Xvfb for a preview-only wi
 - [ ] Test representative Intel/AMD graphics and document NVIDIA requirements.
 
 Use at least 8 GiB RAM and a new 64 GiB virtual disk for the initial build test. Never pass physical disks into the test VM. A successful standard Plasma installation does not validate the optional Aero build. Record ISO date, repository versions, firmware mode, virtual hardware and Aero source revisions with test results; upstream dependencies are not pinned.
+
+## EFI mount regression
+
+Setup now clears signatures on newly created target partitions, directly probes their new filesystem types, refreshes udev metadata, and explicitly mounts root as ext4 and EFI as vfat. Tests reject an unexpected SquashFS probe result and verify the explicit mount arguments. The supplied VM log establishes the wrong filesystem attempt; it does not establish whether old on-disk signatures or stale detection metadata caused it.

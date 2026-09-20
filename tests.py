@@ -3,6 +3,8 @@ import copy
 import dataclasses
 import io
 import tempfile
+import shutil
+import subprocess
 import unittest
 from pathlib import Path
 from unittest.mock import patch, Mock
@@ -156,6 +158,8 @@ class Execution(unittest.TestCase):
                 commands.append((tuple(map(str,args)), kwargs))
                 if failure and failure in args:
                     raise engine.SetupError('Injected failure')
+                if args[0] == 'blkid':
+                    return 'vfat\n' if str(args[-1]).endswith('1') else 'ext4\n'
                 if args[0] == 'pacstrap':
                     for folder in ['root', 'var/log', 'etc']:
                         (target/folder).mkdir(parents=True, exist_ok=True)
@@ -178,6 +182,9 @@ class Execution(unittest.TestCase):
         grub = [c for c in flat if 'grub-install' in c][0]
         self.assertIn('--target=x86_64-efi', grub)
         self.assertIn('--no-nvram', grub)
+        mounts = [c for c in flat if c[0] == 'mount']
+        self.assertEqual(mounts, [('mount', '-t', 'ext4', '/dev/sda2', str(target)), ('mount', '-t', 'vfat', '/dev/sda1', str(target/'boot/efi'))])
+        self.assertIn('--wipe-partitions', next(c for c in flat if c[0] == 'sfdisk'))
         self.assertTrue((target/'etc/fstab').exists())
         self.assertTrue((target/'etc/sudoers.d/10-winux-wheel').exists())
         secret = [(c,k) for c,k in commands if 'chpasswd' in c][0]
@@ -201,6 +208,59 @@ class Execution(unittest.TestCase):
     def test_unmount_failure_not_success(self):
         commands, events, target = self.simulate(failure='umount')
         self.assertFalse(any(kind=='success' for kind,data in events))
+
+class FilesystemRegression(unittest.TestCase):
+    def test_old_signature_cleared_before_format_and_probe(self):
+        installer = engine.Installer(config(), lambda *x:None)
+        with patch.object(installer, 'run', return_value='vfat\n') as run:
+            installer.prepare_filesystem('/dev/nvme0n1p1', 'vfat')
+        self.assertEqual([c.args for c in run.call_args_list], [
+            ('wipefs', '--all', '/dev/nvme0n1p1'),
+            ('mkfs.fat', '-F', '32', '-n', 'SYSTEM', '/dev/nvme0n1p1'),
+            ('blkid', '-p', '-s', 'TYPE', '-o', 'value', '/dev/nvme0n1p1'),
+            ('udevadm', 'trigger', '--action=change', '--sysname-match=nvme0n1p1'),
+            ('udevadm', 'settle')])
+
+    def test_wrong_type_refused(self):
+        installer = engine.Installer(config(), lambda *x:None)
+        with patch.object(installer, 'run', return_value='squashfs\n') as run:
+            with self.assertRaisesRegex(engine.SetupError, 'expected vfat.*squashfs'):
+                installer.prepare_filesystem('/dev/nvme0n1p1', 'vfat')
+        self.assertFalse(any(c.args[0] in {'mount', 'pacstrap'} for c in run.call_args_list))
+
+    def test_unsupported_type_never_writes(self):
+        installer = engine.Installer(config(), lambda *x:None)
+        with patch.object(installer, 'run') as run:
+            with self.assertRaises(engine.SetupError):
+                installer.prepare_filesystem('/dev/nvme0n1p1', 'squashfs')
+        run.assert_not_called()
+
+    @unittest.skipUnless(all(shutil.which(x) for x in ['mksquashfs','wipefs','mkfs.fat','blkid']), 'filesystem tools unavailable')
+    def test_real_squashfs_image_reformatted_as_fat32(self):
+        # Regular files only: no block devices, mounts, sudo, or root needed.
+        with tempfile.TemporaryDirectory() as d:
+            folder = Path(d)
+            source = folder/'contents'
+            source.mkdir()
+            (source/'old.txt').write_text('old filesystem')
+            image = folder/'partition.img'
+            subprocess.run(['mksquashfs', str(source), str(image), '-noappend', '-processors', '1', '-quiet'], check=True, capture_output=True)
+            with image.open('r+b') as stream:
+                stream.truncate(64*1024**2)
+            detected = subprocess.check_output(['blkid','-p','-s','TYPE','-o','value',str(image)], text=True).strip()
+            self.assertEqual(detected, 'squashfs')
+            installer = engine.Installer(config(), lambda *x:None)
+            commands = []
+            def run(*args, **kwargs):
+                commands.append(args)
+                if args[0] == 'udevadm':
+                    return ''  # Regular files have no udev events.
+                self.assertEqual(args[-1], str(image))
+                self.assertTrue(image.is_file())
+                return subprocess.check_output(args, text=True, stderr=subprocess.STDOUT)
+            with patch.object(installer, 'run', side_effect=run):
+                installer.prepare_filesystem(str(image), 'vfat')
+            self.assertEqual(subprocess.check_output(['blkid','-p','-s','TYPE','-o','value',str(image)], text=True).strip(), 'vfat')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

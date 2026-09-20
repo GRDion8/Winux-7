@@ -210,7 +210,7 @@ class Installer:
     def check_live(self):
         if os.geteuid() != 0 or platform.machine() != 'x86_64' or not Path('/run/archiso').is_dir():
             raise SetupError('Real installation is allowed only as root inside an x86_64 Arch live ISO. Use Preview on your everyday computer.')
-        for name in ['lsblk', 'sfdisk', 'wipefs', 'udevadm', 'mkfs.ext4', 'mkfs.fat', 'mount',
+        for name in ['lsblk', 'sfdisk', 'wipefs', 'blkid', 'udevadm', 'mkfs.ext4', 'mkfs.fat', 'mount',
                      'umount', 'pacstrap', 'arch-chroot', 'genfstab', 'pacman', 'timedatectl']:
             if not shutil.which(name):
                 raise SetupError(f'The live environment is missing {name}. Start with launch.sh on a current Arch ISO.')
@@ -270,18 +270,19 @@ class Installer:
             self.check_disk()  # Last possible check before the first destructive command.
             self.erased = True
             self.run('wipefs', '--all', disk)
-            self.run('sfdisk', '--lock', '--wipe', 'always', disk, input=partition_table(self.c.firmware))
+            self.run('sfdisk', '--lock', '--wipe', 'always', '--wipe-partitions', 'always', disk,
+                     input=partition_table(self.c.firmware))
             self.run('udevadm', 'settle')
             root_part = partition_path(disk, 2)
             boot_part = partition_path(disk, 1)
-            self.run('mkfs.ext4', '-F', '-L', 'Winux', root_part)
+            self.prepare_filesystem(root_part, 'ext4')
             TARGET.mkdir(parents=True, exist_ok=True)
-            self.run('mount', root_part, str(TARGET))
+            self.run('mount', '-t', 'ext4', root_part, str(TARGET))
             self.mounted = True
             if self.c.firmware == 'uefi':
-                self.run('mkfs.fat', '-F', '32', '-n', 'SYSTEM', boot_part)
+                self.prepare_filesystem(boot_part, 'vfat')
                 (TARGET / 'boot/efi').mkdir(parents=True)
-                self.run('mount', boot_part, str(TARGET / 'boot/efi'))
+                self.run('mount', '-t', 'vfat', boot_part, str(TARGET / 'boot/efi'))
             self.stage(2)
             packages = ['base', 'linux', 'linux-firmware', 'intel-ucode', 'amd-ucode', 'grub', 'efibootmgr',
                         'networkmanager', 'sudo', 'git', 'base-devel', 'pciutils', 'python', 'tk',
@@ -336,6 +337,24 @@ class Installer:
             self.emit('success', 'Installation complete. Restart, remove the USB drive, and sign in with your new account.')
         elif completed:
             raise SetupError('System installed, but the drive could not be safely unmounted. Shut down before removing any drives; see the log.')
+
+    def prepare_filesystem(self, partition, fstype):
+        # Called only for newly created partitions of the confirmed erase target.
+        # Wiping the whole disk's partition table does not clear signatures inside
+        # partitions, and udev may still remember the previous filesystem type.
+        if fstype not in {'ext4', 'vfat'}:
+            raise SetupError('Unsupported installation filesystem.')
+        self.run('wipefs', '--all', partition)
+        if fstype == 'ext4':
+            self.run('mkfs.ext4', '-F', '-L', 'Winux', partition)
+        else:
+            self.run('mkfs.fat', '-F', '32', '-n', 'SYSTEM', partition)
+        # Low-level probing reads the new superblock instead of cached metadata.
+        detected = self.run('blkid', '-p', '-s', 'TYPE', '-o', 'value', partition).strip()
+        if detected != fstype:
+            raise SetupError(f'{partition}: expected {fstype} after formatting, detected {detected or "no filesystem"}. Stopping before mounting.')
+        self.run('udevadm', 'trigger', '--action=change', '--sysname-match=' + Path(partition).name)
+        self.run('udevadm', 'settle')
 
     def configure(self):
         c = self.c

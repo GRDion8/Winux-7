@@ -141,7 +141,22 @@ The script copies the system's current `releng` profile into a unique build dire
 
 Use a display resolution of at least 1024×768. Test that ISO in a VM before copying it to installation media. Choose **Network settings** if you need Wi-Fi. The custom image uses NetworkManager in the live session; the stock ISO path retains its existing network stack.
 
-No prebuilt ISO, signed release, checksum manifest, or completed ISO build is included with this development commit. Archiso package changes can require updates to the builder.
+No prebuilt ISO, signed release, or checksum manifest is supplied. A user has successfully built and booted the custom ISO; full installation validation is still ongoing. Archiso package changes can require updates to the builder.
+
+## Updating Setup on an existing live ISO
+
+An ISO contains the code as it existed when you built it. To use an installer fix without rebuilding the ISO, close the failed Setup window, return to the live terminal, and run:
+
+```bash
+cd /root
+git clone https://github.com/GRDion8/Winux-7.git Winux-7-fixed
+cd Winux-7-fixed
+bash launch.sh
+```
+
+Use a new folder name if `Winux-7-fixed` already exists, or run `git pull --ff-only` inside that checkout. This downloads only the project, so you do not need to reinstall the graphical dependencies already present on the custom ISO. The current version fixes the EFI mount error “Can't find a SQUASHFS superblock.” Start Setup again and carefully reselect the target disk; retrying installation erases it again.
+
+To embed the fix into a new ISO instead, update your build-machine checkout with `git pull --ff-only` and run `sudo bash build-iso.sh "$PWD/iso-output"` again. Boot the newly built ISO, not the old one.
 
 ## If something goes wrong
 
