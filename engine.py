@@ -12,6 +12,8 @@ import signal
 import stat
 import subprocess
 import time
+import bootloader
+import hardware
 
 ROOT = Path(__file__).resolve().parent
 TARGET = Path('/mnt/winux-target')
@@ -191,6 +193,7 @@ class Installer:
         self.runner = runner
         self.mounted = False
         self.erased = False
+        self.hardware_plan = hardware.Hardware("unknown", "none", []).plan()
 
     def stage(self, n):
         self.emit('stage', (n, STAGES[n]))
@@ -211,13 +214,14 @@ class Installer:
         if os.geteuid() != 0 or platform.machine() != 'x86_64' or not Path('/run/archiso').is_dir():
             raise SetupError('Real installation is allowed only as root inside an x86_64 Arch live ISO. Use Preview on your everyday computer.')
         for name in ['lsblk', 'sfdisk', 'wipefs', 'blkid', 'udevadm', 'mkfs.ext4', 'mkfs.fat', 'mount',
-                     'umount', 'pacstrap', 'arch-chroot', 'genfstab', 'pacman', 'timedatectl']:
+                     'findmnt', 'systemd-detect-virt', 'umount', 'pacstrap', 'arch-chroot', 'genfstab', 'pacman', 'timedatectl']:
             if not shutil.which(name):
                 raise SetupError(f'The live environment is missing {name}. Start with launch.sh on a current Arch ISO.')
         if firmware() != self.c.firmware:
             raise SetupError('Firmware mode changed. Restart Setup.')
         if TARGET.is_symlink() or os.path.ismount(TARGET) or (TARGET.exists() and any(TARGET.iterdir())):
             raise SetupError(f'{TARGET} is occupied. Reboot the live ISO before starting another installation.')
+        bootloader.check_firmware(self.c.firmware)
         self.check_disk()
 
     def check_disk(self):
@@ -238,10 +242,13 @@ class Installer:
     def preflight(self):
         self.c.validate()
         self.check_live()
+        info = hardware.detect()
+        self.hardware_plan = info.plan()
+        self.emit('log', 'Hardware selection: ' + json.dumps(self.hardware_plan))
         self.run('timedatectl', 'set-ntp', 'true')
         # Refresh only the disposable live ISO's package database, before disk writes.
         self.run('pacman', '-Sy', '--noconfirm')
-        self.run('pacman', '-Si', 'base', 'linux', 'linux-firmware', 'grub', 'plasma-meta', 'plasma-x11-session', 'kwin-x11')
+        self.run('pacman', '-Si', 'base', 'linux', 'linux-firmware', 'grub', 'plasma-meta', 'plasma-x11-session', 'kwin-x11', 'mkinitcpio', *self.hardware_plan['packages'])
         if self.c.aero:
             details = self.run('pacman', '-Si', 'plasma-workspace')
             match = re.search(r'^Version\s*:\s*(?:\d+:)?(\d+\.\d+)\.', details, re.M)
@@ -273,6 +280,7 @@ class Installer:
             self.run('sfdisk', '--lock', '--wipe', 'always', '--wipe-partitions', 'always', disk,
                      input=partition_table(self.c.firmware))
             self.run('udevadm', 'settle')
+            bootloader.validate_layout(json.loads(self.run('sfdisk', '--json', disk)), disk, self.c.firmware)
             root_part = partition_path(disk, 2)
             boot_part = partition_path(disk, 1)
             self.prepare_filesystem(root_part, 'ext4')
@@ -284,11 +292,11 @@ class Installer:
                 (TARGET / 'boot/efi').mkdir(parents=True)
                 self.run('mount', '-t', 'vfat', boot_part, str(TARGET / 'boot/efi'))
             self.stage(2)
-            packages = ['base', 'linux', 'linux-firmware', 'intel-ucode', 'amd-ucode', 'grub', 'efibootmgr',
+            packages = ['base', 'linux', 'mkinitcpio', 'grub', 'efibootmgr',
                         'networkmanager', 'sudo', 'git', 'base-devel', 'pciutils', 'python', 'tk',
                         'plasma-meta', 'plasma-x11-session', 'kwin-x11', 'sddm', 'dolphin', 'konsole',
                         'kate', 'ark', 'gwenview', 'pipewire', 'pipewire-audio', 'pipewire-pulse', 'wireplumber',
-                        'noto-fonts', 'ttf-dejavu', 'mesa', 'vulkan-radeon', 'vulkan-intel', 'xdg-user-dirs']
+                        'noto-fonts', 'ttf-dejavu', 'xdg-user-dirs', *self.hardware_plan['packages']]
             self.run('pacstrap', '-K', str(TARGET), *packages)
             fstab = self.run('genfstab', '-U', str(TARGET))
             self.write('etc/fstab', fstab)
@@ -305,13 +313,8 @@ class Installer:
                 self.chroot('systemctl', 'enable', 'sddm.service')
                 self.chroot('systemctl', 'set-default', 'graphical.target')
             self.stage(5)
-            if self.c.firmware == 'uefi':
-                self.chroot('grub-install', '--target=x86_64-efi', '--efi-directory=/boot/efi',
-                            '--bootloader-id=Winux', '--removable', '--no-nvram')
-            else:
-                self.chroot('grub-install', '--target=i386-pc', disk)
-            self.chroot('grub-mkconfig', '-o', '/boot/grub/grub.cfg')
-            self.chroot('mkinitcpio', '-P')
+            bootloader.prepare_initramfs(TARGET, self.hardware_plan['storage_modules'], self.run)
+            bootloader.install(TARGET, disk, self.c.firmware, self.run, self.runner.write)
             self.stage(6)
             self.install_welcome()
             self.run('sync')
@@ -375,6 +378,9 @@ class Installer:
         self.write('etc/sudoers.d/10-winux-wheel', '%wheel ALL=(ALL:ALL) ALL\n', 0o440)
         self.chroot('visudo', '-cf', '/etc/sudoers')
         self.chroot('systemctl', 'enable', 'NetworkManager.service', 'systemd-timesyncd.service')
+        self.write('var/log/winux-hardware.json', json.dumps(self.hardware_plan, indent=2) + '\n')
+        if self.hardware_plan['services']:
+            self.chroot('systemctl', 'enable', *self.hardware_plan['services'])
         self.write('etc/default/grub', 'GRUB_DEFAULT=0\nGRUB_TIMEOUT=3\nGRUB_DISTRIBUTOR="Winux 7"\nGRUB_CMDLINE_LINUX_DEFAULT="quiet"\n')
         # RAM-backed swap avoids another partition and works without a fixed swapfile.
         self.write('etc/systemd/system/winux-zram.service', '[Unit]\nDescription=Winux compressed swap\nAfter=systemd-modules-load.service\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/usr/bin/modprobe zram\nExecStart=/usr/bin/zramctl /dev/zram0 --algorithm zstd --size 2G\nExecStart=/usr/bin/mkswap /dev/zram0\nExecStart=/usr/bin/swapon --priority 100 /dev/zram0\n[Install]\nWantedBy=multi-user.target\n')

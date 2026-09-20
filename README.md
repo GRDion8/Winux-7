@@ -8,6 +8,7 @@ Boot a current Arch ISO, launch Setup, and work through a familiar wizard: prefe
 
 ## Start here
 
+- **[Repair a disk that will not boot](BOOT-REPAIR.md)** — preserve your existing installation.
 - **[Complete installation tutorial](TUTORIAL.md)** — preview, stock ISO, custom ISO, first login, and recovery.
 - **[Existing post-install guide](POSTINSTALL.md)** — for an already installed Arch system.
 - **[Validation and VM test checklist](TESTING.md)** — what was tested and what remains.
@@ -54,13 +55,18 @@ The initial installer supports **x86_64, one entire disk of at least 48 GiB, UEF
 
 Aero targets Plasma **6.7.x**. Setup checks repository metadata before erasing; it stops on a mismatch instead of forcing incompatible components. Arch repositories and upstream sources are mutable, so a successful preflight cannot guarantee a later build. The standard Plasma option bypasses the Aero version restriction and installs without the Aero look.
 
-UEFI installs use GRUB's removable/fallback boot path on the chosen disk, without modifying firmware NVRAM. Select that disk's UEFI boot entry in the firmware menu if necessary.
+UEFI installs now register an active **Winux** firmware boot entry for the selected disk and also install the standard fallback EFI loader. Setup verifies the GPT layout, mounted partitions, kernel, normal/fallback startup images, GRUB menu and root UUID before reporting success. UEFI requires writable firmware variables.
+
+Hardware detection selects Intel or AMD CPU microcode, Intel/AMD/Nouveau graphics packages, applicable audio firmware, and VMware/VirtualBox/QEMU guest tools. Storage-controller modules are checked against the installed kernel and included in its startup images. Linux handles network/storage driver loading; `linux-firmware` supplies the baseline firmware. NVIDIA uses conservative Nouveau initially, not an unverified proprietary-driver choice. The package plan is saved to `/var/log/winux-hardware.json`. Run `python hardware.py` for a read-only report.
 
 ## Source map
 
 | File | Purpose |
 | --- | --- |
 | `setup.py` | Graphical wizard and harmless preview |
+| `bootloader.py`, `repair-boot.py` | Shared boot verification and repair without repartitioning |
+| `hardware.py` | Read-only hardware detection and package selection |
+| `boot_tests.py`, `repair_tests.py` | Boot, hardware, and repair regression tests |
 | `engine.py` | Validation, discovery, preflight, partitioning, chroot setup, cleanup |
 | `launch.sh`, `xsession.sh` | Start the graphical installer from Archiso |
 | `build-iso.sh` | Build a custom releng-based ISO with graphical startup |
@@ -74,7 +80,7 @@ UEFI installs use GRUB's removable/fallback boot path on the chosen disk, withou
 ## Development
 
 ```bash
-python tests.py
+python -m unittest discover -p '*tests.py'
 python -m py_compile engine.py setup.py welcome.py
 bash -n launch.sh xsession.sh build-iso.sh arch-win7-aero-postinstall.sh
 # Requires a graphical display (or Xvfb):

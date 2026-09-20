@@ -4,19 +4,19 @@ This is a development installer, not a verified production release. No destructi
 
 ## Automated checks
 
-Run `python tests.py`. Most tests use fake disk metadata and mocked commands. One optional regression test uses filesystem tools on a temporary regular file to convert an old SquashFS image to FAT32; it never uses a block device, mounts anything, or needs root. They cover validation, drive-name handling, mounted/live media exclusion, swap and LVM exclusion, disk identity changes, non-live refusal, version mismatch before partitioning, password stdin/log handling, BIOS and UEFI command flows, failure cleanup, and no success after failed unmount.
+Run `python -m unittest discover -p '*tests.py'`. Most tests use fake disk metadata and mocked commands. One optional regression test uses filesystem tools on a temporary regular file to convert an old SquashFS image to FAT32; it never uses a block device, mounts anything, or needs root. They cover validation, drive-name handling, mounted/live media exclusion, swap and LVM exclusion, disk identity changes, non-live refusal, version mismatch before partitioning, password stdin/log handling, BIOS and UEFI command flows, failure cleanup, and no success after failed unmount.
 
 Run `python gui_test.py` under a graphical display or Xvfb for a preview-only wizard flow. Python compilation and Bash syntax checks cover the shipped entrypoints. These checks do not prove that Arch package downloads, GRUB boot, upstream builds, firmware or hardware work.
 
 ## Results for this development version
 
-- 29 backend/regression tests: passed, including a real temporary-file SquashFS-to-FAT32 conversion.
+- 47 backend, boot, hardware and repair regression tests: passed, including a real temporary-file SquashFS-to-FAT32 conversion.
 - Full preview wizard flow: passed in an isolated Xvfb display with Tk.
 - Wi-Fi dialog scan/result rendering: passed with mocked network results; no real connection was attempted.
 - All wizard pages fit at 1024×768 by geometry checks.
 - Python compilation and Bash syntax checks: passed.
 - Existing post-install script: byte-for-byte unchanged.
-- The user successfully built and booted the custom ISO in VMware. Their first installation reached partition formatting, then failed because the EFI mount attempted SquashFS instead of FAT32. The filesystem preparation/mount fix has regression coverage, but the complete install, reboot and Aero build remain unverified.
+- The user successfully built and booted the custom ISO in VMware. Their first installation reached partition formatting, then failed because the EFI mount attempted SquashFS instead of FAT32. The filesystem preparation/mount fix has regression coverage, the user subsequently reported installation completion but network/PXE boot after restart. The new named-entry/fallback-loader repair has automated coverage; a successful reboot after this update remains unverified.
 
 ## Required before a production release
 
@@ -40,3 +40,9 @@ Use at least 8 GiB RAM and a new 64 GiB virtual disk for the initial build test.
 ## EFI mount regression
 
 Setup now clears signatures on newly created target partitions, directly probes their new filesystem types, refreshes udev metadata, and explicitly mounts root as ext4 and EFI as vfat. Tests reject an unexpected SquashFS probe result and verify the explicit mount arguments. The supplied VM log establishes the wrong filesystem attempt; it does not establish whether old on-disk signatures or stale detection metadata caused it.
+
+## Boot and hardware regressions
+
+Coverage includes exact GPT partition type/layout checks, NVMe EFI registration on the correct parent disk, EFI partition identity, existing-entry reuse, BIOS whole-disk GRUB, image generation before menu generation, missing-image/EFI/fstab/mount/firmware-entry failures, installed-kernel storage module selection, and CPU/GPU/VM package plans. Repair tests verify inspection has no target writes, the apply path contains no format/partition commands, and cleanup runs after failure. Commands and boot binaries are simulated; they do not establish that a generated EFI binary boots.
+
+VM acceptance: boot the updated ISO in UEFI, install to disposable NVMe storage, power off, detach ISO, confirm Winux entry persists and reaches login. Repeat with SATA and BIOS. Test repair against an old installed image without changing its partition UUIDs or user data.

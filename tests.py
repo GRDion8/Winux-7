@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch, Mock
 import engine
+from boot_tests import FakeBoot, UUID
 
 
 def config(**kwargs):
@@ -151,19 +152,28 @@ class Execution(unittest.TestCase):
         root = Path(directory.name)
         target = root/'target'
         events, commands = [], []
+        boot = FakeBoot(target, mode)
         class FakeRunner:
             log_path = root/'log'
             log = io.StringIO()
+            def write(self, text):
+                self.log.write(text + "\n")
             def run(self, args, **kwargs):
                 commands.append((tuple(map(str,args)), kwargs))
                 if failure and failure in args:
                     raise engine.SetupError('Injected failure')
+                if (args[0] in {'sfdisk', 'findmnt'} and ('--json' in args)) or (args[0] == 'blkid' and ('UUID' in args or 'PARTUUID' in args)):
+                    return boot(*args)
+                if args[0] == 'arch-chroot':
+                    return boot(*args)
                 if args[0] == 'blkid':
                     return 'vfat\n' if str(args[-1]).endswith('1') else 'ext4\n'
                 if args[0] == 'pacstrap':
+                    boot.write('boot/vmlinuz-linux', 'kernel')
+                    boot.write('usr/lib/modules/6.7-test/pkgbase', 'linux\n')
                     for folder in ['root', 'var/log', 'etc']:
                         (target/folder).mkdir(parents=True, exist_ok=True)
-                return 'UUID=example / ext4 defaults 0 1\n' if args[0]=='genfstab' else ''
+                return f'UUID={UUID} / ext4 defaults 0 1\n' if args[0]=='genfstab' else ''
         FakeRunner.log_path.write_text('test log')
         cfg = config(firmware=mode, aero=False)
         installer = engine.Installer(cfg, lambda *x:events.append(x), FakeRunner())

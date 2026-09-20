@@ -109,14 +109,14 @@ Setup displays the active stage and live command output. The animated progress b
 3. Install Arch, kernel/firmware, desktop packages, and audio.
 4. Create your account, locale, clock, network service, and administrator access.
 5. Build the Aero desktop in the target system (unless standard Plasma was selected).
-6. Install GRUB and generate the initramfs.
+6. Generate normal/fallback startup images, install GRUB, register the UEFI entry where applicable, and verify boot files.
 7. Add the welcome guide, save the log, and unmount the target.
 
 Do not remove power or close Setup while it is working. There is no mid-install cancellation or automatic rollback. Source builds may be quiet for a while. If an error occurs, Setup shows failure instead of claiming completion.
 
 ## 5. First start
 
-When Setup reports success, select **Restart now**. Remove or detach the installation ISO/USB during restart. If firmware boots the USB again, choose the installed disk in its boot menu. UEFI uses the disk's fallback bootloader path, rather than adding an NVRAM entry.
+When Setup reports success, select **Restart now**. Remove or detach the installation ISO/USB during restart. If firmware boots the USB again, choose the installed disk in its boot menu. UEFI registers a Winux firmware entry and also supplies a fallback loader. If the system falls through to network/PXE boot, follow [Boot repair](BOOT-REPAIR.md) to repair the existing installation without erasing it.
 
 At the login screen, select the AeroThemePlasma/AeroShell X11 session if it is not selected automatically. Sign in with your new account. The first-login task applies the Aero layout and effects; it can take a moment. Sign out and back in if some elements have not refreshed. The welcome window links to this guide.
 
