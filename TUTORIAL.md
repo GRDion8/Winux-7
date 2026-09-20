@@ -1,0 +1,169 @@
+# Install Winux 7
+
+Winux installs Arch Linux and gives it a Windows 7–inspired desktop. The new graphical Setup runs **from a booted Arch live ISO**. The older `arch-win7-aero-postinstall.sh` remains available for machines that already have Arch installed.
+
+This is a development release. A full VM install/boot validation is still required. Try it on a disposable virtual machine before using hardware.
+
+## 1. Try the appearance without installing
+
+On a Linux desktop with Python and Tk installed:
+
+```bash
+git clone https://github.com/GRDion8/Winux-7.git
+cd Winux-7
+python setup.py --demo
+```
+
+On Arch, install the preview dependencies with `sudo pacman -S python tk ttf-dejavu` if needed. Other distributions use their own package manager. Preview runs as your normal account. It shows a fictional 128 GiB SSD and installation USB, and uses simulated progress. Even its final “Simulate installation” button cannot install anything. Use a made-up password in the preview.
+
+## 2. Prepare a test computer
+
+For the first test, create a VM with:
+
+- x86_64 CPU, preferably 4 or more virtual cores;
+- 8 GiB RAM recommended for the live desktop and source builds;
+- a new virtual disk of at least 64 GiB (the installer enforces 48 GiB minimum);
+- internet access, usually the VM's default NAT network;
+- a current official Arch Linux ISO attached as its virtual DVD;
+- UEFI or legacy BIOS enabled; test both separately;
+- no physical disks passed through to the VM.
+
+For hardware, make a separate backup and unplug drives you do not intend to erase. Prepare boot media using your trusted ISO-writing tool. Download the official ISO from [Arch Linux](https://archlinux.org/download/) and follow its verification instructions. Secure Boot signing is not included in this project.
+
+## 3. Boot the stock Arch ISO
+
+Choose the Arch live environment from the boot menu. Its console automatically signs in as root.
+
+### Connect to the internet
+
+With Ethernet or a VM's NAT network, the connection will usually already work. For Wi-Fi:
+
+```text
+iwctl
+device list
+station wlan0 scan
+station wlan0 get-networks
+station wlan0 connect "Your Wi-Fi name"
+exit
+```
+
+Replace `wlan0` with the device name shown by `device list`. Enter the Wi-Fi password when prompted. Do not put your password in a shared script or command example.
+
+### Download and start Setup
+
+Run these commands **only in the live ISO**:
+
+```bash
+pacman -Sy --needed git
+git clone https://github.com/GRDion8/Winux-7.git
+cd Winux-7
+bash launch.sh
+```
+
+The launcher downloads the small graphical environment into the disposable live system. It does not install Arch onto your disk at this point. It refuses to launch real installation outside an x86_64 Archiso root session.
+
+If package installation reports no space left, the ISO's writable RAM overlay is full. Boot the custom ISO described below (graphical dependencies are already included), or restart the VM with more RAM. Do not attempt to solve this by deleting unknown files from a physical drive.
+
+## 4. Follow the wizard
+
+### Welcome
+
+Choose **Install now**. A preview instead says **Try the setup** and clearly labels itself as non-destructive.
+
+### Preferences
+
+Choose the installed system's language/format, keyboard, and time zone. Setup itself remains English. Click **Apply keyboard**, then type a few characters in the keyboard test. Confirm this before entering your account password.
+
+### Connection and desktop
+
+Keep internet access active. On the custom ISO, **Network settings** opens a Wi-Fi picker; choose your network and enter its password. Use Advanced for hidden or enterprise networks. On the stock ISO, keep the connection made with `iwctl` before launching.
+
+Leave **Install the Windows 7–style Aero desktop** selected for the intended experience. Source compilation can take substantially longer than installing the base system. If today's repository packages are incompatible with Aero's Plasma 6.7 target, Setup stops before erasing. The alternate unchecked option installs standard KDE Plasma without the Windows 7 look.
+
+### Drive selection
+
+Choose the whole disk, checking its path, model, capacity, and serial number. Mounted drives, swap devices, active storage mappings, read-only drives, and disks below the minimum size are unavailable. Installation media with a mounted filesystem is blocked.
+
+Only **erase the entire selected disk** is supported. Existing Windows partitions, Linux partitions, and recovery partitions on that disk will all be lost. This version does not shrink partitions, preserve data, or create a dual-boot setup. Filesystem labels and free-space estimates are not used to infer that data is disposable.
+
+### Your account
+
+Enter a lowercase user name, computer name, and password of at least 8 characters. This account can use `sudo` with its password. The root account is locked; automatic login is off. Passwords are not saved in the installer configuration or logs.
+
+### Final review
+
+Review the exact disk and settings. Check the backup acknowledgment, then type the displayed confirmation, for example:
+
+```text
+ERASE /dev/sda
+```
+
+Press **Erase drive and install** only when that is the disk you intend to erase. This action permanently destroys its existing partitions and data. The development preview uses a separate **Simulate installation** button.
+
+### Installation
+
+Setup displays the active stage and live command output. The animated progress bar means work is ongoing; it is not a fake percentage or time estimate. The stages are:
+
+1. Validate the live environment, disk identity, package metadata, and Aero compatibility.
+2. Create GPT partitions and format the selected disk.
+3. Install Arch, kernel/firmware, desktop packages, and audio.
+4. Create your account, locale, clock, network service, and administrator access.
+5. Build the Aero desktop in the target system (unless standard Plasma was selected).
+6. Install GRUB and generate the initramfs.
+7. Add the welcome guide, save the log, and unmount the target.
+
+Do not remove power or close Setup while it is working. There is no mid-install cancellation or automatic rollback. Source builds may be quiet for a while. If an error occurs, Setup shows failure instead of claiming completion.
+
+## 5. First start
+
+When Setup reports success, select **Restart now**. Remove or detach the installation ISO/USB during restart. If firmware boots the USB again, choose the installed disk in its boot menu. UEFI uses the disk's fallback bootloader path, rather than adding an NVRAM entry.
+
+At the login screen, select the AeroThemePlasma/AeroShell X11 session if it is not selected automatically. Sign in with your new account. The first-login task applies the Aero layout and effects; it can take a moment. Sign out and back in if some elements have not refreshed. The welcome window links to this guide.
+
+Use the Start menu for applications, Dolphin for files, and the network icon for Wi-Fi. The live ISO's saved network passwords are not copied to the installed system, so connect to Wi-Fi again if necessary. Your existing Windows software and drivers do not automatically run on Linux.
+
+Microsoft fonts are not bundled. The optional font-import instructions are in [POSTINSTALL.md](POSTINSTALL.md).
+
+## 6. Build an ISO that opens Setup automatically
+
+This is the most convenient path for end users after the image has been built and tested. The custom live image includes the graphical dependencies and starts the wizard on console 1. It remains an **online installer**, not a self-contained offline OS image.
+
+Use an Arch Linux build machine or disposable Arch VM with adequate free storage (plan for tens of GiB) and internet access:
+
+```bash
+sudo pacman -Syu --needed archiso git
+git clone https://github.com/GRDion8/Winux-7.git
+cd Winux-7
+sudo bash build-iso.sh "$PWD/iso-output"
+```
+
+The script copies the system's current `releng` profile into a unique build directory under `/var/tmp`, includes Setup and its graphical dependencies, and calls `mkarchiso`. It never flashes a disk. Build artifacts are retained for troubleshooting, and the final ISO goes in `iso-output`.
+
+Use a display resolution of at least 1024×768. Test that ISO in a VM before copying it to installation media. Choose **Network settings** if you need Wi-Fi. The custom image uses NetworkManager in the live session; the stock ISO path retains its existing network stack.
+
+No prebuilt ISO, signed release, checksum manifest, or completed ISO build is included with this development commit. Archiso package changes can require updates to the builder.
+
+## If something goes wrong
+
+- **Setup will not open on your usual desktop:** run `python setup.py --demo`. Real mode requires booting the ISO.
+- **No graphical display:** the launcher needs a local console with working Xorg graphics. Run it from tty1. Switch to tty2 with Ctrl+Alt+F2 to inspect errors, and back to tty1 with Ctrl+Alt+F1.
+- **No available drive:** check that the test disk is at least 48 GiB and is not mounted or being used as swap/LVM/RAID. Do not force-select a busy device. Reboot the live ISO if previous tools mounted it.
+- **Aero version mismatch:** no target disk writes have occurred in this preflight failure. Use a compatible repository/package set, or select standard Plasma. The installer does not force unsupported versions.
+- **Download or source build failure after partitioning:** the disk is already partly installed and may not boot. There is no automatic resume. Save the log, fix the cause, reboot the live environment, and reinstall on the disposable target. Reinstalling erases it again.
+- **Cleanup/unmount error:** shut down before unplugging the selected drive. Do not treat the installation as fully verified.
+- **NVIDIA graphics problems:** automatic proprietary driver setup is outside this release. Use a VM or supported graphics device for initial validation; hardware-specific drivers may require manual setup.
+- **Installed desktop looks incomplete:** inspect the first-login log below and check the chosen X11 session. See `POSTINSTALL.md` for theming details.
+
+### Log locations
+
+- During installation: `/var/log/winux-setup.log` in the live environment.
+- If the target reached the filesystem stage, Setup attempts to copy that log to the installed system at `/var/log/winux-setup.log` (root-readable).
+- After first login: `~/.local/state/win7-aero-postinstall/first-login.log`.
+
+Save the live log before rebooting; the live filesystem is temporary. Review it before sharing, as it contains drive identifiers and paths (but not the account password).
+
+## Updates and recovery
+
+Arch is a rolling-release system. Before upgrading Plasma/KWin, check AeroThemePlasma compatibility. Rebuilding Aero may be necessary after upgrades. The wrapper's configuration backup is not a disk backup and cannot recover data erased by Setup.
+
+For a standard Arch installation/recovery reference, see the [Arch installation guide](https://wiki.archlinux.org/title/Installation_guide). For theme changes and source rebuilds, consult [AeroThemePlasma](https://github.com/aeroshell-desktop/aerothemeplasma/blob/Plasma/6.7/INSTALL.md).
