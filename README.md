@@ -9,13 +9,14 @@ Boot a current Arch ISO, launch Setup, and work through a familiar wizard: prefe
 ## Start here
 
 - **[Repair a disk that will not boot](BOOT-REPAIR.md)** — preserve your existing installation.
+- **[Desktop update guide](DESKTOP.md)** — update an existing installation without reinstalling.
 - **[Complete installation tutorial](TUTORIAL.md)** — preview, stock ISO, custom ISO, first login, and recovery.
 - **[Existing post-install guide](POSTINSTALL.md)** — for an already installed Arch system.
 - **[Validation and VM test checklist](TESTING.md)** — what was tested and what remains.
 
 ### Safe desktop preview
 
-Install Python and Tk using your distribution's package manager, then:
+Install Python, Tk, and Pillow using your distribution's package manager, then:
 
 ```bash
 python setup.py --demo
@@ -42,20 +43,21 @@ Setup installs its graphical dependencies into the temporary live environment. T
 - Whole-disk GPT partitioning for UEFI or legacy BIOS.
 - Arch Linux, Linux kernel, firmware, GRUB, KDE Plasma X11, audio and desktop applications.
 - Optional AeroThemePlasma source build using the original post-install wrapper inside the installed system's chroot.
-- Regional formats, keyboard layout, time zone, hostname, and administrator account.
+- Full glibc locale catalog, keyboard layout, time zone, hostname, and administrator account.
+- X11 login by default, the supplied wallpaper, Recycle Bin, Firefox, Wine/Mono/Gecko/Winetricks, and native TMOG Task Manager.
 - NetworkManager, time synchronization, compressed RAM swap, and a first-login welcome.
-- Explicit disk review, typed erase confirmation, blocked busy/live disks, preflight package checks, password input through stdin, and protected logs.
+- Explicit disk review, Yes/No erase confirmation naming the selected disk, blocked busy/live disks, preflight package checks, password input through stdin, and protected logs.
 - A custom Archiso image builder. No prebuilt ISO is supplied.
 
 ## Scope
 
-This is an independently branded Linux setup experience, not Microsoft Windows or an exact reproduction of its installer. It does not install Windows applications, Windows drivers, product activation, or Microsoft fonts. The setup UI is English; selected regional settings apply to the installed desktop.
+This is an independently branded Linux setup experience, not Microsoft Windows or an exact reproduction of its installer. It includes Wine for compatible Windows applications, but does not install Windows itself, Windows drivers, product activation, or Microsoft fonts. The setup UI is English; selected regional settings apply to the installed desktop.
 
 The initial installer supports **x86_64, one entire disk of at least 48 GiB, UEFI or BIOS, and an online installation**. It does not support partition preservation, dual boot, encryption, RAID/LVM targets, Secure Boot signing, hibernation, or offline installs. NVIDIA proprietary driver selection is not automated; test your GPU with the standard open drivers before relying on this release.
 
 Aero targets Plasma **6.7.x**. Setup checks repository metadata before erasing; it stops on a mismatch instead of forcing incompatible components. Arch repositories and upstream sources are mutable, so a successful preflight cannot guarantee a later build. The standard Plasma option bypasses the Aero version restriction and installs without the Aero look.
 
-UEFI installs now register an active **Winux** firmware boot entry for the selected disk and also install the standard fallback EFI loader. Setup verifies the GPT layout, mounted partitions, kernel, normal/fallback startup images, GRUB menu and root UUID before reporting success. UEFI requires writable firmware variables.
+UEFI installs now register an active **Winux 7** firmware boot entry for the selected disk and also install the standard fallback EFI loader. Setup verifies the GPT layout, mounted partitions, kernel, normal/fallback startup images, GRUB menu and root UUID before reporting success. UEFI requires writable firmware variables.
 
 Hardware detection selects Intel or AMD CPU microcode, Intel/AMD/Nouveau graphics packages, applicable audio firmware, and VMware/VirtualBox/QEMU guest tools. Storage-controller modules are checked against the installed kernel and included in its startup images. Linux handles network/storage driver loading; `linux-firmware` supplies the baseline firmware. NVIDIA uses conservative Nouveau initially, not an unverified proprietary-driver choice. The package plan is saved to `/var/log/winux-hardware.json`. Run `python hardware.py` for a read-only report.
 
@@ -63,6 +65,9 @@ Hardware detection selects Intel or AMD CPU microcode, Intel/AMD/Nouveau graphic
 
 | File | Purpose |
 | --- | --- |
+| `desktop.py`, `desktop-first-login.py`, `update-desktop.py` | X11 defaults, apps and existing-system update |
+| `locales.py` | Complete supported-locale catalog |
+| `wallpaper.jpg` | User-supplied installer/desktop wallpaper |
 | `setup.py` | Graphical wizard and harmless preview |
 | `bootloader.py`, `repair-boot.py` | Shared boot verification and repair without repartitioning |
 | `hardware.py` | Read-only hardware detection and package selection |
@@ -91,6 +96,6 @@ Do not run actual disk installation tests on a development machine. Use a VM wit
 
 ## Credits and license
 
-The repository retains its [GPL-3.0 license](LICENSE). AeroThemePlasma and its components retain their own licenses and credits. Windows is a Microsoft trademark; this community project is not affiliated with Microsoft or the Arch Linux project.
+The software retains its [GPL-3.0 license](LICENSE). The user-supplied `wallpaper.jpg` is third-party artwork and is not licensed under that GPL grant. AeroThemePlasma and its components retain their own licenses and credits. Windows is a Microsoft trademark; this community project is not affiliated with Microsoft or the Arch Linux project.
 
 Implementation references: [pacstrap](https://man.archlinux.org/man/pacstrap.8.en), [arch-chroot](https://man.archlinux.org/man/arch-chroot.8.en), [sfdisk](https://man.archlinux.org/man/sfdisk.8.en), [grub-install](https://man.archlinux.org/man/grub-install.8.en), [mkarchiso](https://man.archlinux.org/man/mkarchiso.1.en), [Archiso releng profile](https://github.com/archlinux/archiso/tree/master/configs/releng), and [AeroThemePlasma installation instructions](https://github.com/aeroshell-desktop/aerothemeplasma/blob/Plasma/6.7/INSTALL.md).

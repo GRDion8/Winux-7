@@ -14,16 +14,17 @@ import subprocess
 import time
 import bootloader
 import hardware
+import desktop
+import locales
 
 ROOT = Path(__file__).resolve().parent
 TARGET = Path('/mnt/winux-target')
 MIN_DISK = 48 * 1024**3
-LOCALES = {'English (United States)': 'en_US.UTF-8', 'English (United Kingdom)': 'en_GB.UTF-8',
-           'Deutsch': 'de_DE.UTF-8', 'Français': 'fr_FR.UTF-8', 'Español': 'es_ES.UTF-8'}
+LOCALES = locales.choices()
 KEYBOARDS = {'US English': ('us', 'us'), 'UK English': ('uk', 'gb'), 'German': ('de-latin1', 'de'),
              'French': ('fr', 'fr'), 'Spanish': ('es', 'es')}
-STAGES = ['Checking your computer', 'Preparing the drive', 'Installing Arch Linux',
-          'Setting up your account', 'Installing the Aero desktop', 'Making your computer bootable', 'Finishing up']
+STAGES = ['Checking your computer', 'Preparing the drive', 'Installing Winux 7',
+          'Setting up your account', 'Setting up your desktop', 'Making your computer bootable', 'Finishing up']
 
 class SetupError(RuntimeError):
     pass
@@ -192,6 +193,7 @@ class Installer:
         self.emit = emit
         self.runner = runner
         self.mounted = False
+        self.tmog = None
         self.erased = False
         self.hardware_plan = hardware.Hardware("unknown", "none", []).plan()
 
@@ -248,13 +250,15 @@ class Installer:
         self.run('timedatectl', 'set-ntp', 'true')
         # Refresh only the disposable live ISO's package database, before disk writes.
         self.run('pacman', '-Sy', '--noconfirm')
-        self.run('pacman', '-Si', 'base', 'linux', 'linux-firmware', 'grub', 'plasma-meta', 'plasma-x11-session', 'kwin-x11', 'mkinitcpio', *self.hardware_plan['packages'])
+        self.run('pacman', '-Si', 'base', 'linux', 'linux-firmware', 'grub', 'plasma-meta', 'plasma-x11-session', 'kwin-x11', 'mkinitcpio', *self.hardware_plan['packages'], *desktop.PACKAGES)
         if self.c.aero:
             details = self.run('pacman', '-Si', 'plasma-workspace')
             match = re.search(r'^Version\s*:\s*(?:\d+:)?(\d+\.\d+)\.', details, re.M)
             if not match or match.group(1) != '6.7':
                 raise SetupError('Aero currently targets Plasma 6.7. The available package version differs or cannot be verified. No disk has been erased. Choose the standard Plasma option or use compatible repositories.')
             self.run('git', 'ls-remote', '--exit-code', 'https://github.com/aeroshell-desktop/aerothemeplasma.git', 'refs/heads/Plasma/6.7', timeout=60)
+        self.emit('log', 'Downloading and verifying TMOG from its official publisher.')
+        self.tmog = desktop.fetch_tmog(Path('/var/cache/winux/TMOG.AppImage'))
         self.check_disk()
 
     def execute(self):
@@ -296,7 +300,7 @@ class Installer:
                         'networkmanager', 'sudo', 'git', 'base-devel', 'pciutils', 'python', 'tk',
                         'plasma-meta', 'plasma-x11-session', 'kwin-x11', 'sddm', 'dolphin', 'konsole',
                         'kate', 'ark', 'gwenview', 'pipewire', 'pipewire-audio', 'pipewire-pulse', 'wireplumber',
-                        'noto-fonts', 'ttf-dejavu', 'xdg-user-dirs', *self.hardware_plan['packages']]
+                        'noto-fonts', 'ttf-dejavu', 'xdg-user-dirs', *self.hardware_plan['packages'], *desktop.PACKAGES]
             self.run('pacstrap', '-K', str(TARGET), *packages)
             fstab = self.run('genfstab', '-U', str(TARGET))
             self.write('etc/fstab', fstab)
@@ -312,6 +316,7 @@ class Installer:
             else:
                 self.chroot('systemctl', 'enable', 'sddm.service')
                 self.chroot('systemctl', 'set-default', 'graphical.target')
+            desktop.install(TARGET, self.c.username, '/home/'+self.c.username, self.chroot, self.tmog)
             self.stage(5)
             bootloader.prepare_initramfs(TARGET, self.hardware_plan['storage_modules'], self.run)
             bootloader.install(TARGET, disk, self.c.firmware, self.run, self.runner.write)
@@ -363,7 +368,8 @@ class Installer:
         c = self.c
         self.write('etc/hostname', c.hostname + '\n')
         self.write('etc/hosts', f'127.0.0.1 localhost\n::1 localhost\n127.0.1.1 {c.hostname}.localdomain {c.hostname}\n')
-        self.write('etc/locale.gen', c.locale + ' UTF-8\nen_US.UTF-8 UTF-8\n' if c.locale != 'en_US.UTF-8' else 'en_US.UTF-8 UTF-8\n')
+        charset = locales.supported()[c.locale]
+        self.write('etc/locale.gen', c.locale + ' ' + charset + '\n' + ('en_US.UTF-8 UTF-8\n' if c.locale != 'en_US.UTF-8' else ''))
         self.write('etc/locale.conf', f'LANG={c.locale}\n')
         console, xkb = KEYBOARDS[c.keyboard]
         self.write('etc/vconsole.conf', f'KEYMAP={console}\n')
@@ -389,7 +395,7 @@ class Installer:
     def install_welcome(self):
         target = TARGET / 'usr/share/winux-setup'
         target.mkdir(parents=True, exist_ok=True)
-        for name in ['welcome.py', 'TUTORIAL.md', 'POSTINSTALL.md']:
+        for name in ['welcome.py', 'TUTORIAL.md', 'POSTINSTALL.md', 'DESKTOP.md']:
             shutil.copy2(ROOT / name, target / name)
         autostart = TARGET / f'home/{self.c.username}/.config/autostart'
         autostart.mkdir(parents=True, exist_ok=True)

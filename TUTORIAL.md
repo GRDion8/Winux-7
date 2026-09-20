@@ -2,11 +2,13 @@
 
 Winux installs Arch Linux and gives it a Windows 7–inspired desktop. The new graphical Setup runs **from a booted Arch live ISO**. The older `arch-win7-aero-postinstall.sh` remains available for machines that already have Arch installed.
 
+For the new X11, wallpaper, application defaults and an update without reinstalling, see [Desktop update](DESKTOP.md).
+
 This is a development release. A full VM install/boot validation is still required. Try it on a disposable virtual machine before using hardware.
 
 ## 1. Try the appearance without installing
 
-On a Linux desktop with Python and Tk installed:
+On a Linux desktop with Python, Tk and Pillow installed:
 
 ```bash
 git clone https://github.com/GRDion8/Winux-7.git
@@ -92,13 +94,7 @@ Enter a lowercase user name, computer name, and password of at least 8 character
 
 ### Final review
 
-Review the exact disk and settings. Check the backup acknowledgment, then type the displayed confirmation, for example:
-
-```text
-ERASE /dev/sda
-```
-
-Press **Erase drive and install** only when that is the disk you intend to erase. This action permanently destroys its existing partitions and data. The development preview uses a separate **Simulate installation** button.
+Review the exact disk and settings, then press **Install**. The Yes/No confirmation names the selected disk, its size and model. **No** is the default and leaves the disk unchanged. Choose **Yes** only when that is the drive you intend to erase; it permanently deletes all partitions and files on that disk. The preview uses simulated disks and never writes to a drive.
 
 ### Installation
 

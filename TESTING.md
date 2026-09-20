@@ -10,13 +10,13 @@ Run `python gui_test.py` under a graphical display or Xvfb for a preview-only wi
 
 ## Results for this development version
 
-- 47 backend, boot, hardware and repair regression tests: passed, including a real temporary-file SquashFS-to-FAT32 conversion.
+- 57 backend, boot, hardware, desktop and repair regression tests: passed, including a real temporary-file SquashFS-to-FAT32 conversion.
 - Full preview wizard flow: passed in an isolated Xvfb display with Tk.
 - Wi-Fi dialog scan/result rendering: passed with mocked network results; no real connection was attempted.
 - All wizard pages fit at 1024×768 by geometry checks.
 - Python compilation and Bash syntax checks: passed.
 - Existing post-install script: byte-for-byte unchanged.
-- The user successfully built and booted the custom ISO in VMware. Their first installation reached partition formatting, then failed because the EFI mount attempted SquashFS instead of FAT32. The filesystem preparation/mount fix has regression coverage, the user subsequently reported installation completion but network/PXE boot after restart. The new named-entry/fallback-loader repair has automated coverage; a successful reboot after this update remains unverified.
+- The user successfully built and booted the custom ISO in VMware. Their first installation reached partition formatting, then failed because the EFI mount attempted SquashFS instead of FAT32. The filesystem preparation/mount fix has regression coverage, the user subsequently reported installation completion but network/PXE boot after restart. The new named-entry/fallback-loader repair has automated coverage; the user subsequently confirmed the installation boots successfully. This desktop update has not yet received an end-to-end installed-session test.
 
 ## Required before a production release
 
@@ -46,3 +46,9 @@ Setup now clears signatures on newly created target partitions, directly probes 
 Coverage includes exact GPT partition type/layout checks, NVMe EFI registration on the correct parent disk, EFI partition identity, existing-entry reuse, BIOS whole-disk GRUB, image generation before menu generation, missing-image/EFI/fstab/mount/firmware-entry failures, installed-kernel storage module selection, and CPU/GPU/VM package plans. Repair tests verify inspection has no target writes, the apply path contains no format/partition commands, and cleanup runs after failure. Commands and boot binaries are simulated; they do not establish that a generated EFI binary boots.
 
 VM acceptance: boot the updated ISO in UEFI, install to disposable NVMe storage, power off, detach ISO, confirm Winux entry persists and reaches login. Repeat with SATA and BIOS. Test repair against an old installed image without changing its partition UUIDs or user data.
+
+## Desktop and setup changes
+
+57 automated tests pass, including X11 default selection, existing autologin/theme preservation, rejection of missing X11 sessions, TMOG checksum/cache handling, exact wallpaper copying, localized Recycle Bin path, one-time per-user Wine setup and retry on failure. The preview flow tests both No and Yes at the formatting prompt, never invoking the real engine. All six pre-install pages fit at 1024×768. The wallpaper preview was visually inspected. TMOG 0.1.4 was downloaded and matched the publisher’s SHA-256; it was not executed on the development host.
+
+Still required in the test VM: restart into the new default X11 session, confirm the wallpaper survives Aero setup, open the Recycle Bin, Firefox and native TMOG, and launch a representative supported Windows application through Wine. App/menu integration and first-login commands are mocked in the automated tests; no live user configuration was modified here.

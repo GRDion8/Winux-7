@@ -109,12 +109,12 @@ def install(root, disk, mode, run, log, register=True):
             esp_uuid = run('blkid', '-s', 'PARTUUID', '-o', 'value', part(disk,1)).strip()
             if not re.fullmatch(r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}', esp_uuid):
                 raise BootError('Cannot identify the EFI partition UUID.')
-            pattern = r'^Boot([0-9A-Fa-f]{4})\*\s+Winux\s+.*HD\(1,GPT,' + re.escape(esp_uuid) + r',.*[\\/]EFI[\\/]Winux[\\/]grubx64\.efi'
+            pattern = r'^Boot([0-9A-Fa-f]{4})\*\s+Winux(?: 7)?\s+.*HD\(1,GPT,' + re.escape(esp_uuid) + r',.*[\\/]EFI[\\/]Winux[\\/]grubx64\.efi'
             entries = chroot('efibootmgr', '--verbose')
             entry = re.search(pattern, entries, re.M|re.I)
             if not entry:
                 # Explicit parent disk/partition; never let efibootmgr guess /dev/sda.
-                chroot('efibootmgr','--create','--disk',disk,'--part','1','--label','Winux','--loader',r'\EFI\Winux\grubx64.efi')
+                chroot('efibootmgr','--create','--disk',disk,'--part','1','--label','Winux 7','--loader',r'\EFI\Winux\grubx64.efi')
                 entries = chroot('efibootmgr','--verbose')
                 entry = re.search(pattern, entries, re.M|re.I)
             order = re.search(r'^BootOrder:\s*(.+)', entries, re.M)

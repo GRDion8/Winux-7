@@ -20,9 +20,11 @@ with patch.object(setup.engine.Installer, 'execute', side_effect=AssertionError(
     app.repeat.set('not-a-real-password')
     app.advance() # review
     assert app.page == 5
-    app.erasure.set(True)
-    app.confirm.set('ERASE /dev/sda')
-    app.advance() # simulated progress
+    with patch.object(setup.messagebox, 'askyesno', return_value=False):
+        app.advance()
+        assert app.page == 5 and not app.busy, 'No must not start formatting'
+    with patch.object(setup.messagebox, 'askyesno', return_value=True):
+        app.advance() # simulated progress
     deadline = time.monotonic() + 12
     while app.busy and time.monotonic() < deadline:
         app.update()

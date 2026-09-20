@@ -7,17 +7,18 @@ import subprocess
 import threading
 import tkinter as tk
 from tkinter import ttk, messagebox
+from PIL import Image, ImageTk, ImageOps
 import time
 import engine
 
 BLUE = '#075594'
-FONT = 'DejaVu Sans'
+FONT = 'Tahoma'
 
 class Setup(tk.Tk):
     def __init__(self, install=False):
         super().__init__()
         self.real = install
-        self.title('Winux 7 • Setup' + ('' if install else ' • Preview'))
+        self.title('Winux 7')
         self.geometry(f'{min(1040, self.winfo_screenwidth()-30)}x{min(760, self.winfo_screenheight()-50)}')
         self.minsize(900, 680)
         self.configure(bg='#06385a')
@@ -49,6 +50,7 @@ class Setup(tk.Tk):
         self.style.configure('Treeview', rowheight=42, font=(FONT, 10), background='white', fieldbackground='white')
         self.style.configure('Treeview.Heading', font=(FONT, 10, 'bold'))
         self.style.configure('TProgressbar', troughcolor='#e6e8e9', background='#67b648', bordercolor='#aab3bb')
+        self.background_image = Image.open(Path(__file__).with_name('wallpaper.jpg'))
         self.wallpaper = tk.Canvas(self, highlightthickness=0, bg='#06385a')
         self.wallpaper.place(relwidth=1, relheight=1)
         self.wallpaper.bind('<Configure>', self.draw_background)
@@ -56,7 +58,7 @@ class Setup(tk.Tk):
         self.shell.place(relx=.5, rely=.49, anchor='center', relwidth=.87, relheight=.86)
         self.chrome = tk.Frame(self.shell, bg='#b7cede', height=42)
         self.chrome.pack(fill='x')
-        tk.Label(self.chrome, text='◈  Winux 7 Setup', font=(FONT, 11), bg='#b7cede', fg='#103655').pack(side='left', padx=15, pady=10)
+        tk.Label(self.chrome, text='Winux 7', font=(FONT, 11), bg='#b7cede', fg='#103655').pack(side='left', padx=15, pady=10)
         tk.Label(self.chrome, text='LIVE INSTALLER' if self.real else 'PREVIEW • NO DISK CHANGES', font=(FONT, 8, 'bold'), bg='#b7cede', fg='#365b75').pack(side='right', padx=15)
         self.content = tk.Frame(self.shell, bg='white')
         self.content.pack(fill='both', expand=True, padx=6)
@@ -68,7 +70,7 @@ class Setup(tk.Tk):
         self.next.pack(side='right', padx=18, pady=12)
         self.cancel = ttk.Button(self.footer, text='Cancel', command=self.close)
         self.cancel.pack(side='right', pady=12)
-        self.status = tk.Label(self, bg='#06385a', fg='#d8eff9', text='Winux 7  •  Your familiar desktop. A new beginning.', font=(FONT, 10))
+        self.status = tk.Label(self, bg='#06385a', fg='#d8eff9', text='Winux 7', font=(FONT, 10))
         self.status.place(relx=.5, rely=.955, anchor='center')
         self.bind('<Alt-Left>', lambda e: self.previous() if not self.busy else None)
         self.render()
@@ -77,13 +79,8 @@ class Setup(tk.Tk):
     def draw_background(self, event):
         c, w, h = self.wallpaper, event.width, event.height
         c.delete('all')
-        for y in range(0, h, 4):
-            t = y / max(h, 1)
-            r, g, b = int(7+14*t), int(46+58*t), int(85+52*t)
-            c.create_rectangle(0, y, w, y+4, outline='', fill=f'#{r:02x}{g:02x}{b:02x}')
-        c.create_oval(-w*.35, h*.38, w*.85, h*1.35, outline='#398f9a', width=2)
-        c.create_oval(-w*.3, h*.42, w*.9, h*1.38, outline='#25778b', width=7)
-        c.create_oval(w*.57, -h*.45, w*1.44, h*.85, outline='#2c738f', width=3)
+        self.background_photo = ImageTk.PhotoImage(ImageOps.fit(self.background_image, (max(w,1), max(h,1)), method=Image.Resampling.LANCZOS))
+        c.create_image(0, 0, anchor='nw', image=self.background_photo)
 
     def label(self, text, *, size=11, color='#354b60', parent=None, bold=False):
         label = tk.Label(parent or self.body, text=text, bg='white', fg=color,
@@ -103,13 +100,13 @@ class Setup(tk.Tk):
         self.back.configure(state='normal' if self.page and self.page < 6 else 'disabled')
         self.next.configure(text='Next  ›', state='normal')
         [self.welcome, self.region, self.connection, self.drive, self.account, self.review, self.progress][self.page]()
-        self.status.configure(text=('1  Collecting information     ━━━━━     2  Installing Winux' if self.page < 6 else '1  Collecting information     ━━━━━     2  Installing Winux  ●'))
+        self.status.configure(text=('1  Collecting information     ━━━━━     2  Installing Winux 7' if self.page < 6 else '1  Collecting information     ━━━━━     2  Installing Winux 7  ●'))
 
     def welcome(self):
-        self.label('◈', size=66, color='#278dc2')
+        self.label('Welcome', size=22, color='#278dc2')
         self.label('Winux 7', size=40, color='#173f66')
         self.label('A familiar place to start.', size=19, color='#55768e')
-        self.label('Set up your computer with Arch Linux and a Windows 7–inspired Aero desktop. We’ll guide you through each step.', size=12)
+        self.label('Set up Winux 7 on your computer. We’ll guide you through each step.', size=12)
         self.label('Keep your computer connected to power and the internet.\nYou’ll need an empty drive, or a complete backup of the drive you choose.', size=10)
         if not self.real:
             self.label('This is a preview. Drives and installation progress are simulated.\nNo operating system will be installed.', color='#916610', size=10)
@@ -125,7 +122,13 @@ class Setup(tk.Tk):
 
     def region(self):
         self.heading('Choose your preferences', 'These settings will be used for your new desktop. Setup itself is in English.')
-        self.field('Language & formats', self.locale, list(engine.LOCALES))
+        language = self.field('Language & formats', self.locale, list(engine.LOCALES))
+        language.configure(state='normal')
+        def filter_locales(event):
+            if event.keysym not in {'Up','Down','Return','Tab'}:
+                query = self.locale.get().casefold()
+                language.configure(values=[name for name in engine.LOCALES if query in name.casefold()])
+        language.bind('<KeyRelease>', filter_locales)
         self.field('Keyboard layout', self.keyboard, list(engine.KEYBOARDS))
         self.field('Time zone', self.zone, engine.timezones())
         test = tk.StringVar()
@@ -143,12 +146,12 @@ class Setup(tk.Tk):
         return True
 
     def connection(self):
-        self.heading('Stay connected', 'Winux downloads the system and desktop components during installation.')
+        self.heading('Stay connected', 'Winux 7 downloads the system and desktop components during installation.')
         self.label('An Ethernet cable is the easiest way to connect. For Wi-Fi, open Network settings and choose your network.', size=12)
         ttk.Button(self.body, text='Network settings…', command=self.network).pack(anchor='w', pady=12)
-        self.label('Stock Arch ISO: if you already connected using iwctl, keep that connection. The network button is available on the custom Winux ISO.', size=10)
+        self.label('Stock Arch ISO: if you already connected using iwctl, keep that connection. The network button is available on the Winux 7 ISO.', size=10)
         self.label('Setup checks package availability before erasing the drive. A connection can still fail later; keep the network active throughout installation.', size=10)
-        ttk.Checkbutton(self.body, text='Install the Windows 7–style Aero desktop (recommended)', variable=self.aero).pack(anchor='w', pady=18)
+        ttk.Checkbutton(self.body, text='Use the classic Winux 7 appearance (recommended)', variable=self.aero).pack(anchor='w', pady=18)
         self.label('Aero builds from source and needs a compatible Plasma 6.7 package set. Uncheck this only for a standard KDE Plasma installation.', size=10)
 
     def network(self):
@@ -163,7 +166,7 @@ class Setup(tk.Tk):
             messagebox.showinfo('Connect to Wi-Fi', 'Keep the connection you made in the Arch live terminal.\n\nIf needed, press Ctrl+Alt+F2 and use iwctl:\nstation wlan0 scan\nstation wlan0 get-networks\nstation wlan0 connect YOUR_NETWORK\n\nUse your adapter name from “device list”. Return to Setup with Ctrl+Alt+F1.')
 
     def drive(self):
-        self.heading('Where do you want to install Winux?', 'Choose the entire drive to use. All partitions and files on that drive will be erased.')
+        self.heading('Where do you want to install Winux 7?', 'Choose the entire drive to use. All partitions and files on that drive will be erased.')
         self.tree = ttk.Treeview(self.body, columns=('disk', 'size', 'state'), show='headings', height=4, selectmode='browse')
         for key, name, width in [('disk','Drive',350), ('size','Size',95), ('state','Availability',260)]:
             self.tree.heading(key, text=name)
@@ -213,12 +216,11 @@ class Setup(tk.Tk):
     def review(self):
         self.heading('Ready to install', 'Please review your choices. Nothing has been erased yet.')
         c = self.config()
-        self.label(f'Drive     {c.disk.label}\nAccount     {c.username} on {c.hostname}\nRegion     {c.locale}  •  {c.keyboard}  •  {c.timezone}\nDesktop     {"Windows 7–style Aero" if c.aero else "Standard KDE Plasma"}', size=11)
+        self.label(f'Drive     {c.disk.label}\nAccount     {c.username} on {c.hostname}\nRegion     {c.locale}  •  {c.keyboard}  •  {c.timezone}\nDesktop     {"Winux 7" if c.aero else "Basic desktop"}', size=11)
         self.label('All data on the selected drive will be permanently erased.\nSetup cannot undo this. Disconnect drives you do not want to use.', color='#a53a27', bold=True, size=11)
-        ttk.Checkbutton(self.body, text='I have backed up my files and want to erase this drive.', variable=self.erasure).pack(anchor='w', pady=10)
-        self.field(f'Type ERASE {c.disk.path}', self.confirm)
+        self.label('You will be asked to confirm with Yes or No before formatting begins.', size=10)
         self.label('The installation can take a long time while the Aero desktop builds. Once installation starts, keep power connected and do not close Setup.', size=10)
-        self.next.configure(text='Erase drive and install' if self.real else 'Simulate installation')
+        self.next.configure(text='Install' if self.real else 'Simulate installation')
 
     def advance(self):
         if self.busy:
@@ -230,8 +232,12 @@ class Setup(tk.Tk):
             else:
                 self.destroy()
             return
-        if self.page == 1 and not self.apply_keyboard():
-            return
+        if self.page == 1:
+            if self.locale.get() not in engine.LOCALES:
+                messagebox.showerror('Winux 7', 'Choose a language and format from the list.')
+                return
+            if not self.apply_keyboard():
+                return
         if self.page == 3 and (not self.disk or self.disk.blocked):
             return
         if self.page == 4:
@@ -247,10 +253,11 @@ class Setup(tk.Tk):
                 return
         if self.page == 5:
             try:
-                if not self.erasure.get():
-                    raise engine.SetupError('Confirm that you have backed up the selected drive.')
                 c = self.config()
+                c.confirmation = f'ERASE {c.disk.path}'
                 c.validate()
+                if not messagebox.askyesno('Winux 7', f'Format {c.disk.label}?\n\nAll partitions and files on this drive will be permanently deleted.\n\nContinue?', default='no', icon='warning'):
+                    return
             except engine.SetupError as exc:
                 messagebox.showerror('Check the drive confirmation', str(exc))
                 return
@@ -270,7 +277,7 @@ class Setup(tk.Tk):
             self.render()
 
     def progress(self):
-        self.heading('Installing Winux', 'Your computer will be ready soon. Keep it connected to power and the internet.')
+        self.heading('Installing Winux 7', 'Your computer will be ready soon. Keep it connected to power and the internet.')
         self.progress_title = self.label(engine.STAGES[0], size=14, color=BLUE)
         self.bar = ttk.Progressbar(self.body, mode='indeterminate')
         self.bar.pack(fill='x', pady=10)
@@ -293,7 +300,7 @@ class Setup(tk.Tk):
                     emit('stage', (i, name))
                     emit('log', f'Preview: {name}. No commands are being executed.')
                     time.sleep(.65)
-                emit('success', 'Preview complete. No disks were changed. Boot the live ISO to install Winux.')
+                emit('success', 'Preview complete. No disks were changed. Boot the live ISO to install Winux 7.')
         except Exception as exc:
             config.password = ''
             emit('error', str(exc))

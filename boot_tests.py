@@ -48,7 +48,7 @@ class FakeBoot:
         if 'efibootmgr' in args:
             if '--create' in args:
                 self.registered=True
-            return f'BootOrder: 0001,0002\nBoot0001* Winux HD(1,GPT,{ESP},0x800,0x1000)/File(\\EFI\\Winux\\grubx64.efi)\n' if self.registered else 'BootOrder: 0002\n'
+            return f'BootOrder: 0001,0002\nBoot0001* Winux 7 HD(1,GPT,{ESP},0x800,0x1000)/File(\\EFI\\Winux\\grubx64.efi)\n' if self.registered else 'BootOrder: 0002\n'
         if 'grub-mkconfig' in args:
             self.write('boot/grub/grub.cfg', f'menuentry "Winux" {{\nlinux /vmlinuz-linux root=UUID={UUID}\ninitrd /initramfs-linux.img\n}}\n')
         return ''
