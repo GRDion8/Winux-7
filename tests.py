@@ -123,7 +123,7 @@ class Execution(unittest.TestCase):
 
     def test_preflight_compatible(self):
         installer = engine.Installer(config(), lambda *x:None)
-        with patch.object(desktop, 'fetch_tmog', return_value=Path('/fake/TMOG.AppImage')), patch.object(installer, 'check_live'), patch.object(installer, 'check_disk') as check, patch.object(installer, 'run', return_value='Version : 6.7.4-1\n'):
+        with patch.object(installer, 'check_live'), patch.object(installer, 'check_disk') as check, patch.object(installer, 'run', return_value='Version : 6.7.4-1\n'):
             installer.preflight()
         check.assert_called_once()
 
@@ -179,8 +179,6 @@ class Execution(unittest.TestCase):
         FakeRunner.log_path.write_text('test log')
         cfg = config(firmware=mode, aero=False)
         installer = engine.Installer(cfg, lambda *x:events.append(x), FakeRunner())
-        installer.tmog = root/'TMOG.AppImage'
-        installer.tmog.write_bytes(b'fixture')
         with patch.object(engine, 'TARGET', target), patch.object(installer, 'check_live'), patch.object(installer, 'check_disk'), patch.object(installer, 'preflight'), patch('engine.open', return_value=io.StringIO(), create=True), patch.object(engine.fcntl, 'flock'):
             if failure:
                 with self.assertRaises(engine.SetupError):

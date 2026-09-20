@@ -40,20 +40,32 @@ class DesktopTests(unittest.TestCase):
         (self.root/'usr/share/xsessions/plasmax11.desktop').unlink()
         with self.assertRaises(RuntimeError):desktop.configure_x11(self.root,'alice',lambda *c:None)
         self.assertFalse((self.root/'etc/sddm.conf').exists())
-    def test_checksum_failure_no_install(self):
-        target=self.root/'tmog'
-        with patch.object(desktop.urllib.request,'urlopen',return_value=io.BytesIO(b'wrong')):
-            with self.assertRaisesRegex(RuntimeError,'checksum'):desktop.fetch_tmog(target)
-        self.assertFalse(target.exists())
-        self.assertFalse(target.with_suffix('.download').exists())
-    def test_checksum_success_cache_reused(self):
-        content=b'test release';target=self.root/'tmog'
-        with patch.object(desktop,'TMOG_SHA256',hashlib.sha256(content).hexdigest()),patch.object(desktop.urllib.request,'urlopen',return_value=io.BytesIO(content)) as download:
-            desktop.fetch_tmog(target);desktop.fetch_tmog(target)
-            self.assertEqual(download.call_count,1)
+    def test_yay_and_tmog_build_as_user_and_cleanup_sudo(self):
+        calls=[]
+        desktop.install_tmog(self.root,'alice','/home/alice',lambda *c:calls.append(c))
+        builds=[c for c in calls if c[0]=='runuser']
+        self.assertEqual(len(builds),3)
+        self.assertTrue(all(c[2]=='alice' for c in builds))
+        self.assertIn('https://aur.archlinux.org/yay-bin.git', builds[0])
+        self.assertIn('tmog-bin', builds[-1])
+        self.assertIn(('test','-x','/usr/bin/tmog-task-manager'),calls)
+        self.assertEqual(list((self.root/'etc/sudoers.d').iterdir()),[])
+        self.assertEqual(list((self.root/'var/tmp').iterdir()),[])
+    def test_existing_yay_reused(self):
+        desktop.write(self.root,'usr/bin/yay','fixture')
+        calls=[]
+        desktop.install_tmog(self.root,'alice','/home/alice',lambda *c:calls.append(c))
+        self.assertFalse(any('clone' in c for c in calls))
+        self.assertTrue(any('tmog-bin' in c for c in calls))
+    def test_aur_failure_cleans_temporary_privileges(self):
+        def run(*args):
+            if 'tmog-bin' in args: raise RuntimeError('AUR failure')
+        with self.assertRaisesRegex(RuntimeError,'AUR failure'):
+            desktop.install_tmog(self.root,'alice','/home/alice',run)
+        self.assertEqual(list((self.root/'etc/sudoers.d').iterdir()),[])
+        self.assertEqual(list((self.root/'var/tmp').iterdir()),[])
     def test_install_arms_unprivileged_setup_and_copies_exact_wallpaper(self):
-        tmog=self.root/'download';tmog.write_bytes(b'fixture')
-        desktop.install(self.root,'alice','/home/alice',lambda *c:None,tmog)
+        desktop.install(self.root,'alice','/home/alice',lambda *c:None)
         copied=self.root/'usr/share/backgrounds/winux/wallpaper.jpg'
         self.assertEqual(copied.read_bytes(),(desktop.ROOT/'wallpaper.jpg').read_bytes())
         self.assertIn('desktop-first-login.py',(self.root/'home/alice/.config/autostart/winux-desktop.desktop').read_text())

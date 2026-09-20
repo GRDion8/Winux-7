@@ -1,37 +1,49 @@
 """Desktop defaults shared by new installs and the existing-system updater."""
 import configparser
-import hashlib
 from pathlib import Path
 import shutil
-import urllib.request
+import tempfile
 
 ROOT = Path(__file__).resolve().parent
-PACKAGES = ['firefox', 'wine', 'wine-mono', 'wine-gecko', 'winetricks', 'fuse2',
+PACKAGES = ['firefox', 'wine', 'wine-mono', 'wine-gecko', 'winetricks', 'git', 'base-devel', 'sudo',
             'xdg-utils', 'xdg-user-dirs', 'qt6-tools', 'plasma-x11-session', 'kwin-x11']
-TMOG_URL = 'https://tmog.org/downloads/TaskManagerOG-0.1.4-x86_64.AppImage'
-TMOG_SHA256 = 'a9873347ee2b1a4895cf2c8f39660d8cf4b86ab89b24c08d541f237e365b4346'
+TMOG_PACKAGE = 'tmog-bin'
 
 
-def fetch_tmog(destination):
-    """Pinned official Linux build, checked against the publisher's release manifest."""
-    destination = Path(destination)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    if destination.exists():
-        with destination.open('rb') as stream:
-            if hashlib.file_digest(stream, 'sha256').hexdigest() == TMOG_SHA256:
-                return destination
-    temporary = destination.with_suffix('.download')
+def install_tmog(root, username, home, run):
+    """Build AUR packages as the desktop user, with temporary pacman-only sudo."""
+    root = Path(root)
+    parent = root/'var/tmp'
+    parent.mkdir(parents=True, exist_ok=True)
+    build = Path(tempfile.mkdtemp(prefix='winux-aur-', dir=parent))
+    inside = '/' + str(build.relative_to(root))
+    sudoers = root/'etc/sudoers.d'
+    sudoers.mkdir(parents=True, exist_ok=True)
+    rule = None
     try:
-        with urllib.request.urlopen(TMOG_URL, timeout=60) as response, temporary.open('wb') as out:
-            shutil.copyfileobj(response, out)
-        with temporary.open('rb') as stream:
-            digest = hashlib.file_digest(stream, 'sha256').hexdigest()
-        if digest != TMOG_SHA256:
-            raise RuntimeError('TMOG checksum mismatch. No unverified application will be installed.')
-        temporary.replace(destination)
+        import os
+        fd, name = tempfile.mkstemp(prefix='90-winux-aur-', dir=sudoers)
+        rule = Path(name)
+        with os.fdopen(fd, 'w') as stream:
+            stream.write(f'{username} ALL=(root) NOPASSWD: /usr/bin/pacman\n')
+        rule.chmod(0o440)
+        run('visudo', '-cf', '/' + str(rule.relative_to(root)))
+        run('chown', username, inside)
+        def user(*args):
+            return run('runuser', '-u', username, '--', 'env', 'HOME='+home,
+                       'XDG_CACHE_HOME='+inside+'/cache', *args)
+        if not (root/'usr/bin/yay').is_file():
+            user('git', 'clone', '--depth', '1', 'https://aur.archlinux.org/yay-bin.git', inside+'/yay-bin')
+            user('bash', '-c', 'cd -- "$1" && makepkg -si --needed --noconfirm',
+                 'winux-build-yay', inside+'/yay-bin')
+        run('test', '-x', '/usr/bin/yay')
+        user('/usr/bin/yay', '-S', '--needed', '--noconfirm', '--builddir', inside+'/packages', TMOG_PACKAGE)
+        run('pacman', '-Q', TMOG_PACKAGE)
+        run('test', '-x', '/usr/bin/tmog-task-manager')
     finally:
-        temporary.unlink(missing_ok=True)
-    return destination
+        if rule is not None:
+            rule.unlink(missing_ok=True)
+        shutil.rmtree(build)
 
 
 def write(root, relative, text, mode=0o644):
@@ -85,15 +97,12 @@ def configure_x11(root, username, run):
     run('chown','sddm:sddm','/var/lib/sddm/state.conf')
 
 
-def install(root, username, home, run, tmog, wallpaper=None):
+def install(root, username, home, run, wallpaper=None):
     """run executes commands INSIDE root; home is the account's absolute target path."""
     root = Path(root)
     configure_x11(root, username, run)
-    app = root/'opt/winux/tmog/TaskManagerOG.AppImage'
-    app.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(tmog, app)
-    app.chmod(0o755)
-    write(root, 'usr/local/bin/winux-taskmanager', '#!/bin/sh\nexec /opt/winux/tmog/TaskManagerOG.AppImage "$@"\n', 0o755)
+    install_tmog(root, username, home, run)
+    write(root, 'usr/local/bin/winux-taskmanager', '#!/bin/sh\nexec /usr/bin/tmog-task-manager "$@"\n', 0o755)
     launcher = '[Desktop Entry]\nType=Application\nName=Task Manager\nComment=TMOG system and process monitor\nExec=/usr/local/bin/winux-taskmanager\nIcon=utilities-system-monitor\nTerminal=false\nCategories=System;Monitor;\nStartupNotify=true\n'
     write(root, 'usr/share/applications/winux-taskmanager.desktop', launcher)
     write(root, 'usr/share/applications/winux-wine.desktop', '[Desktop Entry]\nType=Application\nName=Windows Application\nExec=wine start /unix %f\nIcon=wine\nNoDisplay=true\nMimeType=application/x-ms-dos-executable;application/x-msdownload;application/vnd.microsoft.portable-executable;application/x-msi;\n')

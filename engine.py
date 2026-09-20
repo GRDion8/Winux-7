@@ -193,7 +193,6 @@ class Installer:
         self.emit = emit
         self.runner = runner
         self.mounted = False
-        self.tmog = None
         self.erased = False
         self.hardware_plan = hardware.Hardware("unknown", "none", []).plan()
 
@@ -257,8 +256,6 @@ class Installer:
             if not match or match.group(1) != '6.7':
                 raise SetupError('Aero currently targets Plasma 6.7. The available package version differs or cannot be verified. No disk has been erased. Choose the standard Plasma option or use compatible repositories.')
             self.run('git', 'ls-remote', '--exit-code', 'https://github.com/aeroshell-desktop/aerothemeplasma.git', 'refs/heads/Plasma/6.7', timeout=60)
-        self.emit('log', 'Downloading and verifying TMOG from its official publisher.')
-        self.tmog = desktop.fetch_tmog(Path('/var/cache/winux/TMOG.AppImage'))
         self.check_disk()
 
     def execute(self):
@@ -316,7 +313,7 @@ class Installer:
             else:
                 self.chroot('systemctl', 'enable', 'sddm.service')
                 self.chroot('systemctl', 'set-default', 'graphical.target')
-            desktop.install(TARGET, self.c.username, '/home/'+self.c.username, self.chroot, self.tmog)
+            desktop.install(TARGET, self.c.username, '/home/'+self.c.username, self.chroot)
             self.stage(5)
             bootloader.prepare_initramfs(TARGET, self.hardware_plan['storage_modules'], self.run)
             bootloader.install(TARGET, disk, self.c.firmware, self.run, self.runner.write)

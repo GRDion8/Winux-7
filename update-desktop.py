@@ -28,11 +28,9 @@ def main():
         subprocess.run(cmd,check=True)
     with open('/run/winux-setup.lock','w') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-        print('Downloading and verifying TMOG…',flush=True)
-        tmog=desktop.fetch_tmog(Path('/var/cache/winux/TMOG.AppImage'))
         # Full system upgrade avoids unsupported partial upgrades on rolling Arch.
         run('pacman','-Syu','--needed',*desktop.PACKAGES)
-        desktop.install(Path('/'),account.pw_name,account.pw_dir,run,tmog,args.wallpaper)
+        desktop.install(Path('/'),account.pw_name,account.pw_dir,run,args.wallpaper)
         # Re-arm desktop defaults on explicit updates; leave an existing Wine prefix intact.
         (Path(account.pw_dir)/'.local/state/winux-desktop-v1/desktop-complete').unlink(missing_ok=True)
         print('Winux 7 updated. Save your work and restart. X11 is selected for the next login; desktop and Wine setup finish after sign-in.')

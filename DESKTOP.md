@@ -14,7 +14,7 @@ sudo python update-desktop.py
 
 If you already have that checkout, run `git pull --ff-only` inside it instead of cloning again. If running directly as root, specify the desktop account with `--user YOUR_USERNAME`.
 
-The updater first downloads and verifies TMOG, then uses a normal full Arch package upgrade to install the applications. Review the package manager's prompt. It preserves the bootloader and partition layout. It backs up the affected SDDM settings once, retains your existing login policy, and selects the new X11 session. It does **not** turn automatic login on.
+The updater uses a normal full Arch package upgrade to install the applications, bootstraps yay from `yay-bin` if needed, and installs `tmog-bin` through yay. Review the package manager's prompt. It preserves the bootloader and partition layout. It backs up the affected SDDM settings once, retains your existing login policy, and selects the new X11 session. It does **not** turn automatic login on.
 
 Save your work and **restart** when it finishes. First-login setup then creates the desktop link, applies the wallpaper, makes Firefox the default browser, registers Windows executable associations, and initializes your user's Wine environment. An existing Wine prefix is retained. Wine can take a few minutes the first time.
 
@@ -30,9 +30,11 @@ The language/format list uses glibc's `/usr/share/i18n/SUPPORTED` catalog rather
 
 - **Firefox:** installed from the Arch repository and updated through the system package manager. This release uses Firefox rather than Helium.
 - **Wine:** includes Wine, Wine Mono, Wine Gecko and Winetricks. “Windows Application Settings” opens `winecfg`; supported `.exe` and `.msi` files can open through Wine. The Wine environment belongs to your account and is never initialized as root. Current Arch Wine uses WoW64 for 32-bit and 64-bit applications; the installer does not force an incompatible 32-bit prefix. Application-specific runtimes and game compatibility still vary; this is not a guarantee that every Windows application runs. Use Winetricks for the particular application's requirements.
-- **Task Manager:** launches TMOG's native Linux AppImage, with `fuse2` installed. The Plasma System Monitor launcher is overridden for the configured user so existing menu entries use TMOG. A dedicated Task Manager menu entry is also provided. TMOG runs as your user, not root. It is the free edition; no Pro license is supplied.
+- **Task Manager:** launches the native `/usr/bin/tmog-task-manager` installed by the AUR package `tmog-bin` through yay. The Plasma System Monitor launcher is overridden for the configured user so existing menu entries use TMOG. A dedicated Task Manager menu entry is also provided. TMOG runs as your user, not root. It is the free edition; no Pro license is supplied.
 
-TMOG is downloaded directly from its publisher during installation, not redistributed in this repository or the ISO. The integration pins version **0.1.4**, SHA-256 `a9873347ee2b1a4895cf2c8f39660d8cf4b86ab89b24c08d541f237e365b4346`, matching the [publisher's release manifest](https://tmog.org/downloads/release-linux.json). A changed file fails verification. [Official release notes](https://tmog.org/release-notes.html). Updating this pinned release requires updating the verified URL/hash together; Arch's package manager does not update this AppImage.
+TMOG is installed with `yay -S --needed --noconfirm tmog-bin`. If yay is absent, setup first builds and installs `yay-bin` from the AUR. Both builds run as the normal desktop user, never root. A temporary rule permits package installation through pacman and is removed on success or failure. AUR build/download checksums are retained; the old direct AppImage download and pinned checksum preflight are removed. Update TMOG later with `yay -Syu` as your normal user.
+
+The [tmog-bin AUR package](https://aur.archlinux.org/packages/tmog-bin) currently packages TMOG 0.1.3; it may differ from the latest upstream AppImage. Its native executable and required Qt libraries are managed as Arch packages. This fixes the installation method; actual execution still needs testing on the installed system.
 
 ## Wallpaper and desktop setup
 

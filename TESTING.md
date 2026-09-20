@@ -56,3 +56,7 @@ Still required in the test VM: restart into the new default X11 session, confirm
 ## Automatic ISO builder
 
 `python build_iso_tests.py`: three tests pass (help, argument validation, and a simulated complete build using fake Archiso tools). The simulated build verifies bundled desktop assets, checksum output and preservation of an existing same-name ISO. Shell syntax validation passes. The revised builder has not been used for a full ISO build in this development environment.
+
+## TMOG via yay fix
+
+The direct AppImage fetch has been removed from preflight and both installation paths. Setup bootstraps yay through yay-bin, installs tmog-bin as the desktop user, verifies the native executable, and removes temporary package-install permissions even if the AUR command fails. 61 tests pass, including yay reuse and failure cleanup. The current tmog-bin source archive was fetched and matched the checksum in its AUR PKGBUILD. A real yay installation and TMOG launch have not been run on the development host.
