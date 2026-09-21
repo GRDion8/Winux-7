@@ -1,5 +1,20 @@
 # Winux 7 desktop update
 
+## Profile picture, first-boot login and taskbar fix
+
+For an already working installation, run these commands in your project checkout:
+
+```bash
+git pull --ff-only
+sudo python update-desktop.py --defaults-only
+```
+
+Save your work and restart afterward. This small update applies your supplied `user.bmp` to the account and login screen, makes SDDM offer **Winux 7 (X11)** as its login session, and routes Aero's legacy `ksysguard` Task Manager command to TMOG. It also updates the KDE Task Manager launchers. It does not run package upgrades, reinstall TMOG, reset your desktop layout, or change your wallpaper.
+
+SDDM remembers the successful X11 login and reads a dedicated Winux session directory. This also prevents Wayland from being selected when the saved session is absent or stale. Vendor session files remain installed, but the Winux login chooser only offers the supported X11 session. Existing automatic-login policy and login theme are retained.
+
+New installations apply these defaults automatically. Rebuild the ISO from the updated checkout to include `user.bmp` and the new setup code. The BMP is copied unchanged into KDE's `.face.icon`, SDDM's system face directory, and AccountsService's icon storage. Supplied artwork retains its original rights and is not part of the GPL software license.
+
 This update adds X11 as the default session, the supplied wallpaper, a Recycle Bin desktop link, Firefox, Wine with Mono/Gecko/Winetricks, and the native Linux version of TMOG.
 
 ## Update your working installation

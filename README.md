@@ -54,7 +54,7 @@ The script requests sudo, installs missing Archiso tools after the package manag
 - Arch Linux, Linux kernel, firmware, GRUB, KDE Plasma X11, audio and desktop applications.
 - Optional AeroThemePlasma source build using the original post-install wrapper inside the installed system's chroot.
 - Full glibc locale catalog, keyboard layout, time zone, hostname, and administrator account.
-- X11 login by default, the supplied wallpaper, Recycle Bin, Firefox, Wine/Mono/Gecko/Winetricks, and native TMOG Task Manager.
+- Winux 7 X11 login, the supplied profile picture and wallpaper, Recycle Bin, Firefox, Wine/Mono/Gecko/Winetricks, and native TMOG Task Manager (including the taskbar action).
 - NetworkManager, time synchronization, compressed RAM swap, and a first-login welcome.
 - Explicit disk review, Yes/No erase confirmation naming the selected disk, blocked busy/live disks, preflight package checks, password input through stdin, and protected logs.
 - A custom Archiso image builder. No prebuilt ISO is supplied.
@@ -106,6 +106,6 @@ Do not run actual disk installation tests on a development machine. Use a VM wit
 
 ## Credits and license
 
-The software retains its [GPL-3.0 license](LICENSE). The user-supplied `wallpaper.jpg` is third-party artwork and is not licensed under that GPL grant. AeroThemePlasma and its components retain their own licenses and credits. Windows is a Microsoft trademark; this community project is not affiliated with Microsoft or the Arch Linux project.
+The software retains its [GPL-3.0 license](LICENSE). The user-supplied `wallpaper.jpg` and `user.bmp` are third-party artwork and are not licensed under that GPL grant. AeroThemePlasma and its components retain their own licenses and credits. Windows is a Microsoft trademark; this community project is not affiliated with Microsoft or the Arch Linux project.
 
 Implementation references: [pacstrap](https://man.archlinux.org/man/pacstrap.8.en), [arch-chroot](https://man.archlinux.org/man/arch-chroot.8.en), [sfdisk](https://man.archlinux.org/man/sfdisk.8.en), [grub-install](https://man.archlinux.org/man/grub-install.8.en), [mkarchiso](https://man.archlinux.org/man/mkarchiso.1.en), [Archiso releng profile](https://github.com/archlinux/archiso/tree/master/configs/releng), and [AeroThemePlasma installation instructions](https://github.com/aeroshell-desktop/aerothemeplasma/blob/Plasma/6.7/INSTALL.md).

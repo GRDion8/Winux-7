@@ -46,7 +46,7 @@ printf 'Build workspace: %s\nISO output: %s\n' "$build_dir" "$output_dir"
 cp -a /usr/share/archiso/configs/releng "$build_dir/profile"
 profile="$build_dir/profile"
 install -d "$profile/airootfs/opt/winux-setup"
-for file in setup.py engine.py locales.py desktop.py desktop-first-login.py update-desktop.py DESKTOP.md wallpaper.jpg hardware.py bootloader.py repair-boot.py BOOT-REPAIR.md network.py welcome.py launch.sh xsession.sh arch-win7-aero-postinstall.sh README.md TUTORIAL.md POSTINSTALL.md; do
+for file in setup.py engine.py locales.py desktop.py desktop-first-login.py update-desktop.py DESKTOP.md wallpaper.jpg user.bmp hardware.py bootloader.py repair-boot.py BOOT-REPAIR.md network.py welcome.py launch.sh xsession.sh arch-win7-aero-postinstall.sh README.md TUTORIAL.md POSTINSTALL.md; do
   install -m 0644 "$source_dir/$file" "$profile/airootfs/opt/winux-setup/$file"
 done
 chmod 0755 "$profile/airootfs/opt/winux-setup/launch.sh" "$profile/airootfs/opt/winux-setup/xsession.sh"

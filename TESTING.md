@@ -1,5 +1,11 @@
 # Validation and release checklist
 
+## Profile, X11 and taskbar fix
+
+66 tests pass against the published baseline plus this update. Added coverage verifies exact BMP copies and permissions, preservation of account metadata, an X11-only SDDM session list even without remembered state, executable TMOG forwarding with arguments, legacy desktop-launcher overrides, and the defaults-only updater avoiding full installation and package commands. The simulated ISO build checks that the supplied avatar is bundled. Python compilation and builder shell syntax checks pass.
+
+Upstream Aero's SevenTasks, SevenStart and logout actions invoke `kstart ksysguard`; the installed compatibility launcher forwards that executable to TMOG. SDDM is given dedicated session directories so missing or stale saved state cannot choose a vendor Wayland session. Vendor files remain untouched. The new login/avatar/menu behavior still needs a reboot and visual check in the installed VM; no live SDDM or TMOG GUI was run in this development environment.
+
 This is a development installer, not a verified production release. No destructive installation has been performed on the developer's computer.
 
 ## Automated checks

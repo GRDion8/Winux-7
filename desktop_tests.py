@@ -25,13 +25,73 @@ class DesktopTests(unittest.TestCase):
         self.assertEqual(c['Autologin']['User'],'alice')
         self.assertEqual(c['Autologin']['Session'],'winux-x11.desktop')
         self.assertEqual(c['Theme']['Current'],'custom')
-        self.assertEqual(c['Users']['RememberLastSession'],'false')
+        self.assertEqual(c['Users']['RememberLastSession'],'true')
         self.assertIn('startplasma-x11',(self.root/'usr/share/xsessions/winux-x11.desktop').read_text())
         self.assertTrue((self.root/'etc/sddm.conf.winux-backup').exists())
     def test_does_not_enable_autologin(self):
         desktop.configure_x11(self.root,'alice',lambda *c:None)
         c=configparser.ConfigParser();c.read(self.root/'etc/sddm.conf')
         self.assertNotIn('user',c['Autologin'])
+    def test_sddm_has_only_winux_x11_even_without_saved_session(self):
+        vendor=desktop.write(self.root,'usr/share/wayland-sessions/aero.desktop','[Desktop Entry]\nExec=start-wayland\n')
+        desktop.configure_x11(self.root,'alice',lambda *c:None)
+        c=configparser.ConfigParser();c.read(self.root/'etc/sddm.conf')
+        x11=self.root/c['X11']['SessionDir'].lstrip('/')
+        wayland=self.root/c['Wayland']['SessionDir'].lstrip('/')
+        self.assertEqual([p.name for p in x11.glob('*.desktop')],['winux-x11.desktop'])
+        self.assertEqual(list(wayland.glob('*.desktop')),[])
+        self.assertTrue(vendor.exists())
+        self.assertIn('Exec=startplasma-x11',(x11/'winux-x11.desktop').read_text())
+    def test_avatar_copied_exactly_and_account_settings_preserved(self):
+        desktop.write(self.root,'var/lib/AccountsService/users/alice','[User]\nLanguage=de_DE.UTF-8\n')
+        calls=[]
+        desktop.configure_avatar(self.root,'alice','/home/alice',lambda *c:calls.append(c))
+        original=(desktop.ROOT/'user.bmp').read_bytes()
+        for path in ['home/alice/.face','home/alice/.face.icon','usr/share/sddm/faces/alice.face.icon',
+                     'usr/share/winux-setup/user.bmp','var/lib/AccountsService/icons/alice']:
+            self.assertEqual((self.root/path).read_bytes(),original)
+            self.assertEqual((self.root/path).stat().st_mode & 0o777,0o644)
+        c=configparser.ConfigParser();c.read(self.root/'var/lib/AccountsService/users/alice')
+        self.assertEqual(c['User']['Language'],'de_DE.UTF-8')
+        self.assertEqual(c['User']['Icon'],'/var/lib/AccountsService/icons/alice')
+        self.assertIn(('chown','alice','/home/alice/.face.icon','/home/alice/.face'),calls)
+    def test_defaults_only_routes_legacy_taskmanager_without_package_operations(self):
+        import subprocess
+        calls=[]
+        desktop.configure_defaults(self.root,'alice','/home/alice',lambda *c:calls.append(c))
+        self.assertFalse(any(c[0] in {'pacman','runuser','systemctl'} for c in calls))
+        wrapper=self.root/'usr/local/bin/ksysguard'
+        self.assertEqual(wrapper.stat().st_mode & 0o777,0o755)
+        # Exercise the actual shell wrapper with only the executable relocated to a fixture.
+        fake=desktop.write(self.root,'bin/tmog-fixture','#!/bin/sh\nprintf "%s\\n" "$@"\n',0o755)
+        script=wrapper.read_text().replace('/usr/bin/tmog-task-manager',str(fake))
+        result=subprocess.run(['sh','-c',script,'ksysguard','argument with spaces'],capture_output=True,text=True,check=True)
+        self.assertEqual(result.stdout,'argument with spaces\n')
+        for name in ['org.kde.plasma-systemmonitor.desktop','org.kde.ksysguard.desktop','ksysguard.desktop']:
+            self.assertIn('Exec=/usr/local/bin/winux-taskmanager',
+                (self.root/'home/alice/.local/share/applications'/name).read_text())
+    def test_defaults_updater_skips_full_install_and_package_upgrade(self):
+        from types import SimpleNamespace
+        spec=importlib.util.spec_from_file_location('updater',desktop.ROOT/'update-desktop.py')
+        updater=importlib.util.module_from_spec(spec);spec.loader.exec_module(updater)
+        release=self.root/'os-release';release.write_text('ID=arch\n')
+        def path(value):
+            return release if value == '/etc/os-release' else self.root/str(value).lstrip('/')
+        (self.root/'home/alice').mkdir(parents=True)
+        (self.root/'usr/share/winux-setup').mkdir(parents=True)
+        with patch('sys.argv',['update-desktop.py','--user','alice','--defaults-only']), \
+             patch.object(updater,'Path',side_effect=path), \
+             patch.object(updater.os,'geteuid',return_value=0), \
+             patch.object(updater.pwd,'getpwnam',return_value=SimpleNamespace(pw_uid=1000,pw_name='alice',pw_dir='/home/alice')), \
+             patch.object(updater.fcntl,'flock'), \
+             patch('builtins.open',return_value=io.StringIO()), \
+             patch.object(updater.desktop,'configure_defaults') as defaults, \
+             patch.object(updater.desktop,'install') as install, \
+             patch.object(updater.subprocess,'run') as command, patch('builtins.print'):
+            updater.main()
+        defaults.assert_called_once()
+        install.assert_not_called()
+        command.assert_not_called()
     def test_aero_x11_preferred(self):
         desktop.write(self.root,'usr/share/xsessions/aero.desktop','[Desktop Entry]\nExec=start-aero-x11\n')
         desktop.configure_x11(self.root,'alice',lambda *c:None)

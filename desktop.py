@@ -89,9 +89,17 @@ def configure_x11(root, username, run):
         if line.startswith('Name[') and '=' in line:
             names[line.split('=',1)[0]]='Winux 7'
     edit_ini(sessions/'winux-x11.desktop', {'Desktop Entry':names})
+    # Use a dedicated session list so a missing/stale SDDM state cannot select
+    # the first vendor Wayland entry. Keep vendor session files intact.
+    login_sessions = root/'usr/share/winux-setup/xsessions'
+    login_sessions.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(sessions/'winux-x11.desktop', login_sessions/'winux-x11.desktop')
+    (root/'usr/share/winux-setup/wayland-sessions').mkdir(parents=True, exist_ok=True)
     # /etc/sddm.conf takes precedence over all vendor and local drop-ins.
     edit_ini(root/'etc/sddm.conf', {'General':{'DisplayServer':'x11'},
-        'Users':{'RememberLastSession':'false'}, 'Autologin':{'Session':'winux-x11.desktop'}})
+        'Users':{'RememberLastSession':'true'}, 'Autologin':{'Session':'winux-x11.desktop'},
+        'X11':{'SessionDir':'/usr/share/winux-setup/xsessions'},
+        'Wayland':{'SessionDir':'/usr/share/winux-setup/wayland-sessions'}})
     state = root/'var/lib/sddm/state.conf'
     edit_ini(state, {'Last':{'User':username, 'Session':'winux-x11.desktop'}})
     state.chmod(0o600)
@@ -99,14 +107,55 @@ def configure_x11(root, username, run):
     run('chown','sddm:sddm','/var/lib/sddm/state.conf')
 
 
+def configure_avatar(root, username, home, run):
+    """Seed both KDE's home avatar and SDDM's readable system copy."""
+    root = Path(root)
+    image = ROOT/'user.bmp'
+    # Copy the supplied BMP unchanged; Qt identifies the image by its contents.
+    for relative in [home.lstrip('/')+'/.face.icon', home.lstrip('/')+'/.face',
+                     'usr/share/winux-setup/user.bmp',
+                     'usr/share/sddm/faces/'+username+'.face.icon',
+                     'var/lib/AccountsService/icons/'+username]:
+        path = root/relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # Replace the entry itself, rather than following a previous avatar symlink.
+        if path.is_symlink():
+            path.unlink()
+        shutil.copyfile(image, path)
+        path.chmod(0o644)
+    run('chown', username, home+'/.face.icon', home+'/.face')
+    edit_ini(root/'etc/sddm.conf', {'Theme':{'FacesDir':'/usr/share/sddm/faces', 'EnableAvatars':'true'}})
+    account = root/'var/lib/AccountsService/users'/username
+    edit_ini(account, {'User':{'Icon':'/var/lib/AccountsService/icons/'+username}})
+    account.chmod(0o600)
+
+
+def configure_defaults(root, username, home, run):
+    """Apply the avatar, login and menu fixes without reinstalling packages."""
+    root = Path(root)
+    run('test', '-x', '/usr/bin/tmog-task-manager')
+    configure_x11(root, username, run)
+    configure_avatar(root, username, home, run)
+    write(root, 'usr/local/bin/winux-taskmanager', '#!/bin/sh\nexec /usr/bin/tmog-task-manager "$@"\n', 0o755)
+    # Aero's taskbar/Start context menus invoke the legacy executable directly.
+    write(root, 'usr/local/bin/ksysguard', '#!/bin/sh\nexec /usr/bin/tmog-task-manager "$@"\n', 0o755)
+    launcher = '[Desktop Entry]\nType=Application\nName=Task Manager\nComment=TMOG system and process monitor\nExec=/usr/local/bin/winux-taskmanager\nIcon=utilities-system-monitor\nTerminal=false\nCategories=System;Monitor;\nStartupNotify=true\n'
+    write(root, 'usr/share/applications/winux-taskmanager.desktop', launcher)
+    userhome = root/home.lstrip('/')
+    for name in ['org.kde.plasma-systemmonitor.desktop', 'org.kde.ksysguard.desktop', 'ksysguard.desktop']:
+        shortcut = 'X-KDE-Shortcuts=Ctrl+Esc\n' if name == 'org.kde.plasma-systemmonitor.desktop' else ''
+        override = write(userhome, '.local/share/applications/'+name, launcher + shortcut)
+        run('chown', username, '/'+str(override.relative_to(root)))
+    for folder in ['.local', '.local/share', '.local/share/applications']:
+        run('chown', username, home+'/'+folder)
+    return launcher
+
+
 def install(root, username, home, run, wallpaper=None):
     """run executes commands INSIDE root; home is the account's absolute target path."""
     root = Path(root)
-    configure_x11(root, username, run)
     install_tmog(root, username, home, run)
-    write(root, 'usr/local/bin/winux-taskmanager', '#!/bin/sh\nexec /usr/bin/tmog-task-manager "$@"\n', 0o755)
-    launcher = '[Desktop Entry]\nType=Application\nName=Task Manager\nComment=TMOG system and process monitor\nExec=/usr/local/bin/winux-taskmanager\nIcon=utilities-system-monitor\nTerminal=false\nCategories=System;Monitor;\nStartupNotify=true\n'
-    write(root, 'usr/share/applications/winux-taskmanager.desktop', launcher)
+    launcher = configure_defaults(root, username, home, run)
     write(root, 'usr/share/applications/winux-wine.desktop', '[Desktop Entry]\nType=Application\nName=Windows Application\nExec=wine start /unix %f\nIcon=wine\nNoDisplay=true\nMimeType=application/x-ms-dos-executable;application/x-msdownload;application/vnd.microsoft.portable-executable;application/x-msi;\n')
     write(root, 'usr/share/applications/winux-wine-settings.desktop', '[Desktop Entry]\nType=Application\nName=Windows Application Settings\nExec=winecfg\nIcon=wine\nCategories=Settings;\n')
     data = root/'usr/share/winux-setup'

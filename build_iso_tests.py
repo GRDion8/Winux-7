@@ -49,6 +49,7 @@ printf 'test ISO artifact' > "$dest/winux-7-test.iso"'''}
             subprocess.run(['sha256sum','-c',checksums[0].name],cwd=output,check=True,capture_output=True)
             staged=next(root.glob('winux-iso.*/profile/airootfs/opt/winux-setup'))
             self.assertTrue((staged/'wallpaper.jpg').exists())
+            self.assertEqual((staged/'user.bmp').read_bytes(),(ROOT/'user.bmp').read_bytes())
             self.assertTrue((staged/'desktop.py').exists())
 
 if __name__=='__main__':unittest.main(verbosity=2)

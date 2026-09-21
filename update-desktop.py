@@ -13,9 +13,12 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--user',default=os.environ.get('SUDO_USER'),help='Desktop account; defaults to the user who invoked sudo')
     parser.add_argument('--wallpaper',type=Path,help='Optional replacement PNG/JPEG/WebP')
+    parser.add_argument('--defaults-only',action='store_true',help='Fix profile picture, X11 login and TMOG menu only; no package upgrade')
     args=parser.parse_args()
     if os.geteuid()!=0 or Path('/run/archiso').exists():
         parser.error('Run with sudo from the installed Winux 7 desktop, not the live ISO.')
+    if args.defaults_only and args.wallpaper:
+        parser.error('--wallpaper cannot be combined with --defaults-only.')
     account=pwd.getpwnam(args.user or '')
     if account.pw_uid<1000 or not Path(account.pw_dir).is_dir():
         parser.error('Choose a regular desktop user with an existing home directory.')
@@ -28,6 +31,10 @@ def main():
         subprocess.run(cmd,check=True)
     with open('/run/winux-setup.lock','w') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        if args.defaults_only:
+            desktop.configure_defaults(Path('/'),account.pw_name,account.pw_dir,run)
+            print('Profile picture, Winux 7 X11 login and TMOG menu updated. Save your work and restart.')
+            return
         # Full system upgrade avoids unsupported partial upgrades on rolling Arch.
         run('pacman','-Syu','--needed',*desktop.PACKAGES)
         desktop.install(Path('/'),account.pw_name,account.pw_dir,run,args.wallpaper)
