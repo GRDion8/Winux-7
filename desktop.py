@@ -28,7 +28,9 @@ def install_tmog(root, username, home, run):
             stream.write(f'{username} ALL=(root) NOPASSWD: /usr/bin/pacman\n')
         rule.chmod(0o440)
         run('visudo', '-cf', '/' + str(rule.relative_to(root)))
-        run('chown', username, inside)
+        # yay invokes git in this directory; create it before dropping privileges.
+        (build/'packages').mkdir(mode=0o700)
+        run('chown', username, inside, inside+'/packages')
         def user(*args):
             return run('runuser', '-u', username, '--', 'env', 'HOME='+home,
                        'XDG_CACHE_HOME='+inside+'/cache', *args)

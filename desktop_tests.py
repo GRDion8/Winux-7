@@ -57,6 +57,30 @@ class DesktopTests(unittest.TestCase):
         desktop.install_tmog(self.root,'alice','/home/alice',lambda *c:calls.append(c))
         self.assertFalse(any('clone' in c for c in calls))
         self.assertTrue(any('tmog-bin' in c for c in calls))
+    def test_yay_build_directory_exists_and_is_owned_before_use(self):
+        for existing_yay in (False, True):
+            with self.subTest(existing_yay=existing_yay):
+                if existing_yay:
+                    desktop.write(self.root,'usr/bin/yay','fixture')
+                owned=set()
+                checked=[]
+                def run(*args):
+                    if args[:2] == ('chown','alice'):
+                        for path in args[2:]:
+                            self.assertTrue((self.root/path.lstrip('/')).is_dir())
+                            owned.add(path)
+                    if '--builddir' in args:
+                        path=args[args.index('--builddir')+1]
+                        directory=self.root/path.lstrip('/')
+                        self.assertTrue(directory.is_dir(), 'yay needs an existing build directory')
+                        self.assertIn(path,owned, 'build directory must belong to the package builder')
+                        self.assertEqual(directory.stat().st_mode & 0o777,0o700)
+                        import subprocess
+                        subprocess.run(['git','-C',str(directory),'init','--quiet'],check=True)
+                        checked.append(path)
+                desktop.install_tmog(self.root,'alice','/home/alice',run)
+                self.assertEqual(len(checked),1)
+                self.assertEqual(list((self.root/'var/tmp').iterdir()),[])
     def test_aur_failure_cleans_temporary_privileges(self):
         def run(*args):
             if 'tmog-bin' in args: raise RuntimeError('AUR failure')
