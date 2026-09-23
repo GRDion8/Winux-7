@@ -58,7 +58,7 @@ class ProfileTests(unittest.TestCase):
         env={**os.environ,'HOME':str(self.root),'XDG_STATE_HOME':str(state),'XDG_CONFIG_HOME':str(config),'XDG_CONFIG_DIRS':'/etc/xdg'}
         def start():return subprocess.check_output(['sh',str(sh)],env=env,text=True)
         self.assertNotIn('/etc/winux-7/',start())
-        marker=state/'winux-desktop-v1/desktop-complete';marker.parent.mkdir(parents=True);marker.touch()
+        marker=state/'winux-desktop-v1/desktop-complete';marker.parent.mkdir(parents=True);marker.touch();(marker.parent/'wine-complete').touch()
         aero=config/'autostart/aerothemeplasma-first-login.desktop';aero.parent.mkdir(parents=True);aero.touch()
         self.assertNotIn('/etc/winux-7/',start())
         done=state/'win7-aero-postinstall/first-login-complete';done.parent.mkdir(parents=True);done.touch()
@@ -87,7 +87,7 @@ class NativePanelTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not shutil.which('c++') or not shutil.which('pkg-config'):raise unittest.SkipTest('Qt compiler unavailable')
-        flags=subprocess.run(['pkg-config','--cflags','--libs','Qt6Widgets'],capture_output=True,text=True)
+        flags=subprocess.run(['pkg-config','--cflags','--libs','Qt6Widgets','Qt6DBus'],capture_output=True,text=True)
         if flags.returncode:raise unittest.SkipTest('Qt Widgets development files unavailable')
         cls.tmp=tempfile.TemporaryDirectory();cls.binary=Path(cls.tmp.name)/'control-panel'
         import shlex
@@ -102,6 +102,7 @@ class NativePanelTests(unittest.TestCase):
         for command in actions.values():
             self.assertFalse(any('systemsettings' in p or 'sh'==p for p in command))
             self.assertFalse(any(p in profile.APPEARANCE for p in command))
+        self.assertEqual(actions['wallpaper'],[])
         self.assertEqual(actions['display'],['/usr/bin/kcmshell6','kcm_kscreen'])
         for value in ['kcm_lookandfeel','kcm_style','; touch /tmp/test','--config']:
             self.assertEqual(self.invoke('--dry-run',value).returncode,2)

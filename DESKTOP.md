@@ -33,7 +33,7 @@ If you already have that checkout, run `git pull --ff-only` inside it instead of
 
 The updater uses a normal full Arch package upgrade to install the applications, bootstraps yay from `yay-bin` if needed, and installs `tmog-bin` through yay. Review the package manager's prompt. It preserves the bootloader and partition layout. It backs up the affected SDDM settings once, retains your existing login policy, and selects the new X11 session. It does **not** turn automatic login on.
 
-Save your work and **restart** when it finishes. First-login setup then creates the desktop link, applies the wallpaper, makes Firefox the default browser, registers Windows executable associations, and initializes your user's Wine environment. An existing Wine prefix is retained. Wine can take a few minutes the first time.
+Save your work and **restart** when it finishes. First-login setup then creates the desktop link, applies the wallpaper, makes Firefox the default browser, registers Windows executable associations, and initializes your user's Wine environment. An existing Wine prefix is retained. Wine can take a few minutes the first time. The Getting things ready screen waits for setup to complete and then restarts after a countdown. If setup fails, it shows an error and retries on the next login.
 
 ## New installations and ISO builds
 
@@ -57,7 +57,9 @@ The [tmog-bin AUR package](https://aur.archlinux.org/packages/tmog-bin) currentl
 
 `wallpaper.jpg` is the exact supplied Windows 7 wallpaper. The installer displays it behind the setup window, and the installed desktop applies it after Aero's initial layout setup finishes. This preserves the order so the theme does not immediately replace the selected wallpaper. The visual installer is a Linux/Tk recreation inspired by Windows 7, not Microsoft's native Windows setup executable.
 
-To use a different wallpaper on the installed system:
+With the Winux desktop profile, use **Control Panel → Appearance and Looks → Desktop Background**. That selection is kept across restarts.
+
+For older installations without the desktop profile, a full desktop update can supply a different default:
 
 ```bash
 sudo python update-desktop.py --wallpaper /absolute/path/to/image.jpg

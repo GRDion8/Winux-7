@@ -140,6 +140,12 @@ Use a display resolution of at least 1024×768. Test that ISO in a VM before cop
 
 No prebuilt ISO or signed release is supplied; the builder generates a SHA-256 checksum for each image it produces. A user has successfully built and booted the custom ISO; full installation validation is still ongoing. Archiso package changes can require updates to the builder.
 
+## First sign-in
+
+After installing, let the **Getting things ready** screen finish. It waits for Aero configuration, initializes Wine for your account and verifies the background. Winux restarts after a 15-second countdown; you can choose **Restart later**. If a stage fails, an error and a setup-log button appear instead of restarting. Sign in again to retry once the problem is resolved.
+
+After that restart, the welcome and finished desktop appear. Change the wallpaper through **Control Panel → Appearance and Looks → Desktop Background**. Your selected picture is copied locally and restored on later logins. See [the desktop profile guide](WINUX-DESKTOP.md) to update an existing installation.
+
 ## Updating Setup on an existing live ISO
 
 An ISO contains the code as it existed when you built it. To use an installer fix without rebuilding the ISO, close the failed Setup window, return to the live terminal, and run:

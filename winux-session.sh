@@ -7,6 +7,7 @@ policy=/etc/xdg/aerothemeplasma
 # Aero's initial layout and wallpaper setup need the Plasma scripting API.
 # Enable the permanent layout policy only once both finishers have succeeded.
 if [ -f "$state_home/winux-desktop-v1/desktop-complete" ] &&
+   [ -f "$state_home/winux-desktop-v1/wine-complete" ] &&
    { [ ! -f "$config_home/autostart/aerothemeplasma-first-login.desktop" ] ||
      [ -f "$state_home/win7-aero-postinstall/first-login-complete" ]; }; then
     policy="/etc/winux-7/locked:/etc/winux-7/theme:$policy"

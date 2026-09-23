@@ -115,15 +115,19 @@ def install(root, run):
     parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='winux-control-panel-', dir=parent) as folder:
         build = Path(folder)
-        shutil.copyfile(ROOT/'control-panel.cpp', build/'control-panel.cpp')
+        for name in ['control-panel.cpp', 'wallpaper.hpp']:
+            shutil.copyfile(ROOT/name, build/name)
         inside = '/'+str(build.relative_to(root))
         # Fixed command, positional directory argument, no user text interpolated into a shell.
-        run('sh', '-c', 'cd -- "$1" && c++ -std=c++17 -fPIC control-panel.cpp -o control-panel $(pkg-config --cflags --libs Qt6Widgets)', 'winux-build', inside)
+        run('sh', '-c', 'cd -- "$1" && c++ -std=c++17 -fPIC control-panel.cpp -o control-panel $(pkg-config --cflags --libs Qt6Widgets Qt6DBus)', 'winux-build', inside)
         binary = (build/'control-panel').read_bytes()
     tx = Transaction(root)
     tx.write('usr/local/bin/winux-control-panel', binary, 0o755)
     tx.write('usr/local/bin/systemsettings', '#!/bin/sh\nexec /usr/local/bin/winux-control-panel "$@"\n', 0o755)
     tx.write('usr/local/bin/winux-session', (ROOT/'winux-session.sh').read_bytes(), 0o755)
+    tx.write('usr/share/winux-setup/desktop-first-login.py', (ROOT/'desktop-first-login.py').read_bytes())
+    tx.write('usr/share/winux-setup/welcome.py', (ROOT/'welcome.py').read_bytes())
+    tx.write('etc/xdg/autostart/winux-desktop.desktop', '[Desktop Entry]\nType=Application\nName=Winux 7\nExec=python /usr/share/winux-setup/desktop-first-login.py\nOnlyShowIn=KDE;\nX-KDE-autostart-after=panel\n')
     for name, content in THEME.items():
         tx.write('etc/winux-7/theme/'+name, content)
     tx.write('etc/winux-7/locked/kdeglobals', LOCKED)

@@ -7,9 +7,11 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <cstdio>
+#include "wallpaper.hpp"
 
 struct Setting { QString id, category, title, detail, icon, module; };
 static const QList<Setting> settings = {
+    {"wallpaper", "Appearance and Looks", "Desktop Background", "Choose a wallpaper for your desktop", "preferences-desktop-wallpaper", ""},
     {"system", "System and Security", "System", "View basic information about your computer", "computer", ""},
     {"power", "System and Security", "Power Options", "Choose sleep and power-saving settings", "preferences-system-power-management", "kcm_powerdevilprofilesconfig"},
     {"network", "Network and Internet", "Network Connections", "Connect to Wi-Fi and manage your connections", "network-wireless", "kcm_networkmanagement"},
@@ -27,7 +29,7 @@ static const QList<Setting> settings = {
     {"accessibility", "Ease of Access", "Ease of Access Center", "Adjust accessibility options", "preferences-desktop-accessibility", "kcm_access"}
 };
 static QStringList commandFor(const Setting &s) {
-    if (s.id == "system") return {};
+    if (s.id == "system" || s.id == "wallpaper") return {};
     if (s.id == "wine") return {"/usr/bin/winecfg"};
     return {"/usr/bin/kcmshell6", s.module};
 }
@@ -131,6 +133,7 @@ public:
         items->addStretch();
     }
     void openSetting(const Setting &s) {
+        if (s.id=="wallpaper") { Wallpaper::dialog(this); return; }
         if (s.id=="system") {
             QMessageBox::information(this,"System — Winux 7",QString("Winux 7\n\nComputer: %1\nProcessor architecture: %2\nSystem storage available: %3 GiB\n\nBuilt on Arch Linux, KDE Plasma and AeroThemePlasma.\nThird-party components retain their licenses and credits.")
                 .arg(QSysInfo::machineHostName(),QSysInfo::currentCpuArchitecture())
@@ -146,6 +149,13 @@ public:
 int main(int argc,char **argv) {
     QApplication app(argc,argv); app.setApplicationName("winux-control-panel"); app.setApplicationDisplayName("Control Panel");
     const auto args=app.arguments();
+    if (args.contains("--restore-wallpaper") || (args.size()>1 && args[1]=="--set-wallpaper")) {
+        try {
+            if (args.contains("--restore-wallpaper")) Wallpaper::restore();
+            else { if(args.size()!=3)return 2;Wallpaper::choose(QFileInfo(args[2]).absoluteFilePath()); }
+            return 0;
+        } catch(const std::exception &e) { std::fprintf(stderr,"%s\n",e.what());return 1; }
+    }
     if (args.contains("--list-actions")) {
         QJsonObject all; for (const auto &s:settings) all[s.id]=QJsonArray::fromStringList(commandFor(s));
         std::puts(QJsonDocument(all).toJson().constData());return 0;

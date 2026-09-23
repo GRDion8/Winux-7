@@ -6,7 +6,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parent
 PACKAGES = ['firefox', 'wine', 'wine-mono', 'wine-gecko', 'winetricks', 'git', 'base-devel', 'sudo',
-            'xdg-utils', 'xdg-user-dirs', 'qt6-tools', 'plasma-x11-session', 'kwin-x11']
+            'python', 'tk', 'xdg-utils', 'xdg-user-dirs', 'qt6-tools', 'plasma-x11-session', 'kwin-x11']
 TMOG_PACKAGE = 'tmog-bin'
 
 

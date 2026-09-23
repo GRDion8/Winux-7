@@ -1,6 +1,14 @@
 # Validation and release checklist
 
-## Winux desktop profile
+## Wallpaper and first-login preparation
+
+83 automated tests pass for this revision. New checks compile the native wallpaper code and use a real private D-Bus connection to a simulated, locked Plasma service: picture selection/copying, removal of the original picture, restoration after restarting the simulated service, invalid files and rejected changes. This does not prove the actual Aero service behaves identically.
+
+First-login tests cover completed-install migration without automatic reboot, Aero timeout, failed final-stage retry, completion markers and wallpaper restoration without repeated Wine initialization. `first_login_gui_test.py` passes all four flows under isolated Xvfb: success, failed setup, inhibited restart and Restart later. Every setup/reboot command in those GUI tests is mocked; no real reboot or host desktop change occurs. The Control Panel and preparation screen were rendered for inspection. Python compilation and shell syntax pass.
+
+VM acceptance: apply `--desktop-profile` and restart; confirm the supplied wallpaper returns. Pick another image under Appearance and Looks, delete its original file, restart twice and verify the saved copy remains. Check multiple connected monitors. For a fresh installation, verify Getting things ready covers the first session, waits for Aero and Wine, automatically restarts once, and opens a finished desktop with no repeat reboot. Test a failed setup and Restart later. Full ISO build, real Wine/Aero completion, and actual reboot remain unverified here.
+
+## Winux desktop profile (previous revision)
 
 76 tests pass for this revision, including real native Qt Control Panel compilation/offscreen GUI execution, approved/blocked settings dispatch, temporary-root profile installation and restoration, manual-edit protection, initial-setup gating, and real KConfig immutable-value enforcement in isolated directories. The simulated ISO build checks the profile module, session launcher, C++ source and guide. The Control Panel preview was rendered and visually inspected. Python compilation and shell syntax checks pass. No real disk installation, complete ISO build or installed Aero/KCM session was run for this revision.
 
