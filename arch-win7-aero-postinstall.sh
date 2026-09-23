@@ -295,8 +295,10 @@ ok "Backup/state snapshot: $BACKUP_DIR"
 info "Installing KDE Plasma, X11, SDDM, desktop essentials and AeroThemePlasma dependencies."
 
 PACKAGES=(
-  # Complete Plasma desktop + explicit X11 path
-  plasma-meta plasma-x11-session kwin-x11 sddm sddm-kcm
+  # Explicit desktop runtime; avoid the full Plasma meta-package.
+  plasma-desktop plasma-workspace plasma-x11-session kwin-x11 sddm sddm-kcm
+  systemsettings kde-cli-tools plasma-nm plasma-pa powerdevil kscreen
+  polkit-kde-agent plasma-integration kde-gtk-config xdg-desktop-portal-kde kio-extras
 
   # Useful baseline desktop applications
   dolphin konsole ark kate gwenview

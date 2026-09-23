@@ -147,7 +147,7 @@ class Execution(unittest.TestCase):
                     runner.run(['sfdisk', '/dev/fake'], input='table')
             runner.log.close()
 
-    def simulate(self, mode='uefi', failure=None):
+    def simulate(self, mode='uefi', failure=None, aero=False):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
@@ -177,7 +177,7 @@ class Execution(unittest.TestCase):
                         (target/folder).mkdir(parents=True, exist_ok=True)
                 return f'UUID={UUID} / ext4 defaults 0 1\n' if args[0]=='genfstab' else ''
         FakeRunner.log_path.write_text('test log')
-        cfg = config(firmware=mode, aero=False)
+        cfg = config(firmware=mode, aero=aero)
         installer = engine.Installer(cfg, lambda *x:events.append(x), FakeRunner())
         with patch.object(engine, 'TARGET', target), patch.object(installer, 'check_live'), patch.object(installer, 'check_disk'), patch.object(installer, 'preflight'), patch('engine.open', return_value=io.StringIO(), create=True), patch.object(engine.fcntl, 'flock'):
             if failure:
@@ -211,6 +211,16 @@ class Execution(unittest.TestCase):
         self.assertIn('--target=i386-pc', grub)
         self.assertEqual(grub[-1], '/dev/sda')
         self.assertFalse(any('mkfs.fat' in c for c,k in commands))
+
+    def test_profile_applied_only_to_aero_install(self):
+        with patch.object(engine.winux_profile,'install') as profile:
+            commands,events,target=self.simulate(aero=True)
+            profile.assert_called_once()
+            self.assertEqual(profile.call_args.args[0],target)
+            self.assertTrue(any(kind=='success' for kind,data in events))
+        with patch.object(engine.winux_profile,'install') as profile:
+            self.simulate(aero=False)
+            profile.assert_not_called()
 
     def test_failure_cleans_mounts_and_never_reports_success(self):
         commands, events, target = self.simulate(failure='pacstrap')

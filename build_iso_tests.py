@@ -51,5 +51,7 @@ printf 'test ISO artifact' > "$dest/winux-7-test.iso"'''}
             self.assertTrue((staged/'wallpaper.jpg').exists())
             self.assertEqual((staged/'user.bmp').read_bytes(),(ROOT/'user.bmp').read_bytes())
             self.assertTrue((staged/'desktop.py').exists())
+            for name in ['winux_profile.py','winux-session.sh','control-panel.cpp','WINUX-DESKTOP.md']:
+                self.assertTrue((staged/name).is_file(),name)
 
 if __name__=='__main__':unittest.main(verbosity=2)

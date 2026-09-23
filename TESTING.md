@@ -1,5 +1,11 @@
 # Validation and release checklist
 
+## Winux desktop profile
+
+76 tests pass for this revision, including real native Qt Control Panel compilation/offscreen GUI execution, approved/blocked settings dispatch, temporary-root profile installation and restoration, manual-edit protection, initial-setup gating, and real KConfig immutable-value enforcement in isolated directories. The simulated ISO build checks the profile module, session launcher, C++ source and guide. The Control Panel preview was rendered and visually inspected. Python compilation and shell syntax checks pass. No real disk installation, complete ISO build or installed Aero/KCM session was run for this revision.
+
+VM acceptance: update the working installation with `--desktop-profile`, restart, verify Control Panel opens from Start and search, confirm theme selectors are absent, try network/sound/display/account pages, and verify Task Manager, screen locking and shutdown still work. On a new installation, ensure Aero layout/wallpaper setup succeeds before logging out and back in to activate the appearance/layout policy. Exercise `--remove-desktop-profile` and restart to verify restoration. Initial login, package dependency resolution, hardware and upstream builds are not established by the automated checks.
+
 ## Profile, X11 and taskbar fix
 
 66 tests pass against the published baseline plus this update. Added coverage verifies exact BMP copies and permissions, preservation of account metadata, an X11-only SDDM session list even without remembered state, executable TMOG forwarding with arguments, legacy desktop-launcher overrides, and the defaults-only updater avoiding full installation and package commands. The simulated ISO build checks that the supplied avatar is bundled. Python compilation and builder shell syntax checks pass.

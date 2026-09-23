@@ -8,6 +8,7 @@ Boot a current Arch ISO, launch Setup, and work through a familiar wizard: prefe
 
 ## Start here
 
+- **[Winux desktop profile](WINUX-DESKTOP.md)** — fixed Aero appearance, a simpler Control Panel, and an undo command for existing installations.
 - **[Repair a disk that will not boot](BOOT-REPAIR.md)** — preserve your existing installation.
 - **[Desktop update guide](DESKTOP.md)** — update an existing installation without reinstalling.
 - **[Complete installation tutorial](TUTORIAL.md)** — preview, stock ISO, custom ISO, first login, and recovery.
@@ -52,7 +53,7 @@ The script requests sudo, installs missing Archiso tools after the package manag
 - Native local graphical wizard with a blue Aero-style background and familiar setup sequence.
 - Whole-disk GPT partitioning for UEFI or legacy BIOS.
 - Arch Linux, Linux kernel, firmware, GRUB, KDE Plasma X11, audio and desktop applications.
-- Optional AeroThemePlasma source build using the original post-install wrapper inside the installed system's chroot.
+- Optional AeroThemePlasma source build with an explicit Plasma runtime package list, Winux Control Panel, and a fixed appearance profile.
 - Full glibc locale catalog, keyboard layout, time zone, hostname, and administrator account.
 - Winux 7 X11 login, the supplied profile picture and wallpaper, Recycle Bin, Firefox, Wine/Mono/Gecko/Winetricks, and native TMOG Task Manager (including the taskbar action).
 - NetworkManager, time synchronization, compressed RAM swap, and a first-login welcome.
@@ -85,7 +86,8 @@ Hardware detection selects Intel or AMD CPU microcode, Intel/AMD/Nouveau graphic
 | `engine.py` | Validation, discovery, preflight, partitioning, chroot setup, cleanup |
 | `launch.sh`, `xsession.sh` | Start the graphical installer from Archiso |
 | `build-iso.sh` | Build a custom releng-based ISO with graphical startup |
-| `arch-win7-aero-postinstall.sh` | Existing Aero desktop installer, preserved unchanged |
+| `arch-win7-aero-postinstall.sh` | Aero source-build wrapper with an explicit desktop package list |
+| `winux_profile.py`, `winux-session.sh`, `control-panel.cpp` | Reversible appearance policy, session launcher and native Control Panel |
 | `network.py` | Wi-Fi selection and connection dialog for the custom ISO |
 | `welcome.py` | First-login welcome and installed guide link |
 | `tests.py` | Fake-device, non-destructive backend tests |

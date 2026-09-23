@@ -1,5 +1,7 @@
 # Winux 7 desktop update
 
+For the new fixed-appearance desktop and Control Panel, use the separate **[Winux desktop profile guide](WINUX-DESKTOP.md)**. It includes an update for working Aero installations without a package upgrade or desktop reset.
+
 ## Profile picture, first-boot login and taskbar fix
 
 For an already working installation, run these commands in your project checkout:

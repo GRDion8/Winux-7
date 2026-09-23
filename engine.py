@@ -16,6 +16,7 @@ import bootloader
 import hardware
 import desktop
 import locales
+import winux_profile
 
 ROOT = Path(__file__).resolve().parent
 TARGET = Path('/mnt/winux-target')
@@ -249,7 +250,7 @@ class Installer:
         self.run('timedatectl', 'set-ntp', 'true')
         # Refresh only the disposable live ISO's package database, before disk writes.
         self.run('pacman', '-Sy', '--noconfirm')
-        self.run('pacman', '-Si', 'base', 'linux', 'linux-firmware', 'grub', 'plasma-meta', 'plasma-x11-session', 'kwin-x11', 'mkinitcpio', *self.hardware_plan['packages'], *desktop.PACKAGES)
+        self.run('pacman', '-Si', 'base', 'linux', 'linux-firmware', 'grub', 'mkinitcpio', *winux_profile.PACKAGES, *self.hardware_plan['packages'], *desktop.PACKAGES)
         if self.c.aero:
             details = self.run('pacman', '-Si', 'plasma-workspace')
             match = re.search(r'^Version\s*:\s*(?:\d+:)?(\d+\.\d+)\.', details, re.M)
@@ -295,7 +296,7 @@ class Installer:
             self.stage(2)
             packages = ['base', 'linux', 'mkinitcpio', 'grub', 'efibootmgr',
                         'networkmanager', 'sudo', 'git', 'base-devel', 'pciutils', 'python', 'tk',
-                        'plasma-meta', 'plasma-x11-session', 'kwin-x11', 'sddm', 'dolphin', 'konsole',
+                        *winux_profile.PACKAGES, 'dolphin', 'konsole',
                         'kate', 'ark', 'gwenview', 'pipewire', 'pipewire-audio', 'pipewire-pulse', 'wireplumber',
                         'noto-fonts', 'ttf-dejavu', 'xdg-user-dirs', *self.hardware_plan['packages'], *desktop.PACKAGES]
             self.run('pacstrap', '-K', str(TARGET), *packages)
@@ -314,6 +315,8 @@ class Installer:
                 self.chroot('systemctl', 'enable', 'sddm.service')
                 self.chroot('systemctl', 'set-default', 'graphical.target')
             desktop.install(TARGET, self.c.username, '/home/'+self.c.username, self.chroot)
+            if self.c.aero:
+                winux_profile.install(TARGET, self.chroot)
             self.stage(5)
             bootloader.prepare_initramfs(TARGET, self.hardware_plan['storage_modules'], self.run)
             bootloader.install(TARGET, disk, self.c.firmware, self.run, self.runner.write)
