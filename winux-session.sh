@@ -13,6 +13,7 @@ if [ -f "$state_home/winux-desktop-v1/desktop-complete" ] &&
     policy="/etc/winux-7/locked:/etc/winux-7/theme:$policy"
 fi
 export XDG_CONFIG_DIRS="$policy:${XDG_CONFIG_DIRS:-/etc/xdg}"
+export XDG_DATA_DIRS="/usr/local/share:/usr/share:${XDG_DATA_DIRS:-}"
 export XDG_CURRENT_DESKTOP=KDE
 export XDG_SESSION_DESKTOP=winux-7
 export QT_QPA_PLATFORMTHEME=kde

@@ -80,7 +80,7 @@ Choose the installed system's language/format, keyboard, and time zone. Setup it
 
 Keep internet access active. On the custom ISO, **Network settings** opens a Wi-Fi picker; choose your network and enter its password. Use Advanced for hidden or enterprise networks. On the stock ISO, keep the connection made with `iwctl` before launching.
 
-Leave **Install the Windows 7–style Aero desktop** selected for the intended experience. Source compilation can take substantially longer than installing the base system. If today's repository packages are incompatible with Aero's Plasma 6.7 target, Setup stops before erasing. The alternate unchecked option installs standard KDE Plasma without the Windows 7 look.
+Winux 7 always installs its own desktop. Source compilation can take substantially longer than installing the base system. If the available repositories are incompatible with the desktop's underlying Plasma 6.7 components, Setup stops before erasing. There is no alternate generic desktop option.
 
 ### Drive selection
 
@@ -104,7 +104,7 @@ Setup displays the active stage and live command output. The animated progress b
 2. Create GPT partitions and format the selected disk.
 3. Install Arch, kernel/firmware, desktop packages, and audio.
 4. Create your account, locale, clock, network service, and administrator access.
-5. Build the Aero desktop in the target system (unless standard Plasma was selected).
+5. Build the Winux desktop and install its core theme, background and Control Panel.
 6. Generate normal/fallback startup images, install GRUB, register the UEFI entry where applicable, and verify boot files.
 7. Add the welcome guide, save the log, and unmount the target.
 
@@ -114,7 +114,7 @@ Do not remove power or close Setup while it is working. There is no mid-install 
 
 When Setup reports success, select **Restart now**. Remove or detach the installation ISO/USB during restart. If firmware boots the USB again, choose the installed disk in its boot menu. UEFI registers a Winux firmware entry and also supplies a fallback loader. If the system falls through to network/PXE boot, follow [Boot repair](BOOT-REPAIR.md) to repair the existing installation without erasing it.
 
-At the login screen, select the AeroThemePlasma/AeroShell X11 session if it is not selected automatically. Sign in with your new account. The first-login task applies the Aero layout and effects; it can take a moment. Sign out and back in if some elements have not refreshed. The welcome window links to this guide.
+The login screen uses the Winux 7 session automatically. Sign in with your new account. The Getting things ready screen finishes desktop and Wine configuration, then restarts after a countdown. The welcome appears after that restart. If setup fails, read its error and log instead of restarting repeatedly.
 
 Use the Start menu for applications, Dolphin for files, and the network icon for Wi-Fi. The live ISO's saved network passwords are not copied to the installed system, so connect to Wi-Fi again if necessary. Your existing Windows software and drivers do not automatically run on Linux.
 

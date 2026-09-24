@@ -37,7 +37,6 @@ class Setup(tk.Tk):
         self.password = tk.StringVar()
         self.repeat = tk.StringVar()
         self.confirm = tk.StringVar()
-        self.aero = tk.BooleanVar(value=True)
         self.erasure = tk.BooleanVar(value=False)
         self.style = ttk.Style(self)
         self.style.theme_use('clam')
@@ -151,8 +150,7 @@ class Setup(tk.Tk):
         ttk.Button(self.body, text='Network settings…', command=self.network).pack(anchor='w', pady=12)
         self.label('Stock Arch ISO: if you already connected using iwctl, keep that connection. The network button is available on the Winux 7 ISO.', size=10)
         self.label('Setup checks package availability before erasing the drive. A connection can still fail later; keep the network active throughout installation.', size=10)
-        ttk.Checkbutton(self.body, text='Use the classic Winux 7 appearance (recommended)', variable=self.aero).pack(anchor='w', pady=18)
-        self.label('Aero builds from source and needs a compatible Plasma 6.7 package set. Uncheck this only for a standard KDE Plasma installation.', size=10)
+        self.label('Winux 7 includes its familiar desktop, Control Panel and desktop background.', size=10)
 
     def network(self):
         if not self.real:
@@ -211,12 +209,12 @@ class Setup(tk.Tk):
     def config(self):
         return engine.Config(self.disk, self.username.get().strip(), self.hostname.get().strip(), self.password.get(),
                              engine.LOCALES[self.locale.get()], self.keyboard.get(), self.zone.get(),
-                             self.aero.get(), engine.firmware(), self.confirm.get())
+                             True, engine.firmware(), self.confirm.get())
 
     def review(self):
         self.heading('Ready to install', 'Please review your choices. Nothing has been erased yet.')
         c = self.config()
-        self.label(f'Drive     {c.disk.label}\nAccount     {c.username} on {c.hostname}\nRegion     {c.locale}  •  {c.keyboard}  •  {c.timezone}\nDesktop     {"Winux 7" if c.aero else "Basic desktop"}', size=11)
+        self.label(f'Drive     {c.disk.label}\nAccount     {c.username} on {c.hostname}\nRegion     {c.locale}  •  {c.keyboard}  •  {c.timezone}\nDesktop     Winux 7', size=11)
         self.label('All data on the selected drive will be permanently erased.\nSetup cannot undo this. Disconnect drives you do not want to use.', color='#a53a27', bold=True, size=11)
         self.label('You will be asked to confirm with Yes or No before formatting begins.', size=10)
         self.label('The installation can take a long time while the Aero desktop builds. Once installation starts, keep power connected and do not close Setup.', size=10)

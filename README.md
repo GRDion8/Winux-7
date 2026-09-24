@@ -53,10 +53,10 @@ The script requests sudo, installs missing Archiso tools after the package manag
 - Native local graphical wizard with a blue Aero-style background and familiar setup sequence.
 - Whole-disk GPT partitioning for UEFI or legacy BIOS.
 - Arch Linux, Linux kernel, firmware, GRUB, KDE Plasma X11, audio and desktop applications.
-- Optional AeroThemePlasma source build with an explicit Plasma runtime package list, Winux Control Panel, and a fixed appearance profile.
+- Integrated Winux 7 desktop with a dedicated theme package, Control Panel, fixed appearance and the Windows 7 wallpaper as its built-in default.
 - Full glibc locale catalog, keyboard layout, time zone, hostname, and administrator account.
 - Winux 7 X11 login, the supplied profile picture and wallpaper, Recycle Bin, Firefox, Wine/Mono/Gecko/Winetricks, and native TMOG Task Manager (including the taskbar action).
-- A first-login Getting things ready screen that waits for Aero, Wine and wallpaper setup, then restarts automatically. Saved wallpaper is restored at later logins.
+- A first-login Getting things ready screen that waits for Aero, Wine and wallpaper setup, then restarts automatically. Saved wallpaper is restored at later logins and after desktop-shell resets; vendor wallpaper alternatives are retired from the system gallery.
 - NetworkManager, time synchronization, compressed RAM swap, and a first-login welcome.
 - Explicit disk review, Yes/No erase confirmation naming the selected disk, blocked busy/live disks, preflight package checks, password input through stdin, and protected logs.
 - A custom Archiso image builder. No prebuilt ISO is supplied.
@@ -67,7 +67,7 @@ This is an independently branded Linux setup experience, not Microsoft Windows o
 
 The initial installer supports **x86_64, one entire disk of at least 48 GiB, UEFI or BIOS, and an online installation**. It does not support partition preservation, dual boot, encryption, RAID/LVM targets, Secure Boot signing, hibernation, or offline installs. NVIDIA proprietary driver selection is not automated; test your GPU with the standard open drivers before relying on this release.
 
-Aero targets Plasma **6.7.x**. Setup checks repository metadata before erasing; it stops on a mismatch instead of forcing incompatible components. Arch repositories and upstream sources are mutable, so a successful preflight cannot guarantee a later build. The standard Plasma option bypasses the Aero version restriction and installs without the Aero look.
+Aero targets Plasma **6.7.x**. Setup checks repository metadata before erasing; it stops on a mismatch instead of forcing incompatible components. Arch repositories and upstream sources are mutable, so a successful preflight cannot guarantee a later build. Winux desktop setup is required; there is no generic desktop fallback in Setup.
 
 UEFI installs now register an active **Winux 7** firmware boot entry for the selected disk and also install the standard fallback EFI loader. Setup verifies the GPT layout, mounted partitions, kernel, normal/fallback startup images, GRUB menu and root UUID before reporting success. UEFI requires writable firmware variables.
 
@@ -88,7 +88,7 @@ Hardware detection selects Intel or AMD CPU microcode, Intel/AMD/Nouveau graphic
 | `launch.sh`, `xsession.sh` | Start the graphical installer from Archiso |
 | `build-iso.sh` | Build a custom releng-based ISO with graphical startup |
 | `arch-win7-aero-postinstall.sh` | Aero source-build wrapper with an explicit desktop package list |
-| `winux_profile.py`, `winux-session.sh`, `control-panel.cpp`, `wallpaper.hpp` | Reversible appearance policy, session launcher and native Control Panel |
+| `winux_profile.py`, `winux_core.py`, `winux-session.sh`, `control-panel.cpp`, `wallpaper.hpp` | Reversible appearance policy, session launcher and native Control Panel |
 | `network.py` | Wi-Fi selection and connection dialog for the custom ISO |
 | `welcome.py` | First-login welcome and installed guide link |
 | `tests.py` | Fake-device, non-destructive backend tests |

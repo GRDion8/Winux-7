@@ -8,18 +8,20 @@ namespace Wallpaper {
 inline QString preferenceFile() {
     return QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation)+"/winux-7/wallpaper.json";
 }
+inline QString defaultImage() {
+    QFile defaults("/usr/share/winux-setup/wallpaper-path");
+    if (!defaults.open(QIODevice::ReadOnly)) throw std::runtime_error("The default Winux wallpaper is missing.");
+    return QString::fromUtf8(defaults.readAll()).trimmed();
+}
 inline QString selected() {
     QFile file(preferenceFile());
     if (file.exists()) {
         if (!file.open(QIODevice::ReadOnly)) throw std::runtime_error("Cannot read the saved wallpaper choice.");
         QJsonParseError error;
         const auto value=QJsonDocument::fromJson(file.readAll(), &error).object().value("image").toString();
-        if (error.error!=QJsonParseError::NoError || value.isEmpty()) throw std::runtime_error("The saved wallpaper choice is invalid.");
-        return value;
+        if (error.error==QJsonParseError::NoError && QFileInfo(value).isFile() && QImageReader(value).canRead()) return value;
     }
-    QFile defaults("/usr/share/winux-setup/wallpaper-path");
-    if (!defaults.open(QIODevice::ReadOnly)) throw std::runtime_error("The default Winux wallpaper is missing.");
-    return QString::fromUtf8(defaults.readAll()).trimmed();
+    return defaultImage();
 }
 inline void validate(const QString &path) {
     if (!QFileInfo(path).isAbsolute() || !QFileInfo(path).isFile() || !QImageReader(path).canRead())
@@ -56,6 +58,8 @@ inline void apply(const QString &image) {
     for (int screen=0; screen<count; ++screen) {
         QDBusReply<QVariantMap> before=shell.call("wallpaper",uint(screen));
         if (!before.isValid() || !before.value().contains("Image")) throw std::runtime_error("A desktop wallpaper is not ready yet.");
+        if (before.value().value("wallpaperPlugin").toString()=="org.kde.image" &&
+            QUrl(before.value().value("Image").toString())==QUrl(uri)) continue;
         // This narrow, synchronously saved API works with Plasma's layout lock.
         // evaluateScript is deliberately unavailable once the desktop is locked.
         auto reply=shell.call("setWallpaper",QString("org.kde.image"),QVariantMap{{"Image",uri}},uint(screen));
@@ -66,12 +70,53 @@ inline void apply(const QString &image) {
             throw std::runtime_error("The desktop has not confirmed the wallpaper yet.");
     }
 }
+inline QString changeLockPath() {
+    QDir().mkpath(QFileInfo(preferenceFile()).absolutePath());
+    return QFileInfo(preferenceFile()).absolutePath()+"/wallpaper-change.lock";
+}
 inline void choose(const QString &source) {
     const auto copy=importPicture(source);
+    QLockFile lock(changeLockPath());
+    if(!lock.tryLock(3000))throw std::runtime_error("The desktop is updating. Please try again.");
     apply(copy);
     save(copy);
 }
-inline void restore() { const auto image=selected(); apply(image); save(image); }
+inline void restore() {
+    QLockFile lock(changeLockPath());
+    if(!lock.tryLock(3000))throw std::runtime_error("The desktop is updating. Please try again.");
+    const auto image=selected(); apply(image); save(image);
+}
+inline bool setupReady() {
+    QString state=qEnvironmentVariable("XDG_STATE_HOME");
+    if(state.isEmpty())state=QDir::homePath()+"/.local/state";
+    const auto config=QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
+    return QFileInfo::exists(state+"/winux-desktop-v1/desktop-complete") &&
+        QFileInfo::exists(state+"/winux-desktop-v1/wine-complete") &&
+        (!QFileInfo::exists(config+"/autostart/aerothemeplasma-first-login.desktop") ||
+         QFileInfo::exists(state+"/win7-aero-postinstall/first-login-complete"));
+}
+inline int service(QApplication &app) {
+    const auto config=QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation)+"/winux-7";
+    QDir().mkpath(config);
+    QLockFile lock(config+"/wallpaper-service.lock");
+    if(!lock.tryLock())return 0;
+    app.setQuitOnLastWindowClosed(false);
+    QTimer timer;QString lastError;
+    auto repair=[&]{
+        if(!setupReady())return; // Do not compete with first-login layout initialization.
+        QLockFile changeLock(changeLockPath());
+        if(!changeLock.tryLock())return;
+        try {apply(selected());lastError.clear();}
+        catch(const std::exception &e){
+            if(lastError!=e.what()){lastError=e.what();qWarning().noquote()<<lastError;}
+        }
+    };
+    QObject::connect(&timer,&QTimer::timeout,&app,repair);
+    timer.start(5000);QTimer::singleShot(0,&app,repair);
+    // Keep repairing late shell startup, shell restarts, activity and screen changes.
+    // apply() reads back each screen and writes only when the image actually differs.
+    return app.exec();
+}
 inline void dialog(QWidget *parent) {
     QDialog dialog(parent); dialog.setWindowTitle("Desktop Background — Winux 7");dialog.resize(660,490);
     auto layout=new QVBoxLayout(&dialog);

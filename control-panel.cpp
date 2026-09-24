@@ -149,6 +149,7 @@ public:
 int main(int argc,char **argv) {
     QApplication app(argc,argv); app.setApplicationName("winux-control-panel"); app.setApplicationDisplayName("Control Panel");
     const auto args=app.arguments();
+    if (args.contains("--wallpaper-service")) return Wallpaper::service(app);
     if (args.contains("--restore-wallpaper") || (args.size()>1 && args[1]=="--set-wallpaper")) {
         try {
             if (args.contains("--restore-wallpaper")) Wallpaper::restore();

@@ -18,6 +18,7 @@ class ProfileTests(unittest.TestCase):
                      'usr/share/applications/systemsettings.desktop','usr/share/applications/kcm_lookandfeel.desktop']:
             p=self.root/name;p.parent.mkdir(parents=True,exist_ok=True)
             p.write_text('[Desktop Entry]\nExec=startatp\nTryExec=startatp\n')
+        (self.root/'usr/share/plasma/look-and-feel/authui7/metadata.json').write_text('{"KPlugin":{"Name":"Aero"}}')
     def run_target(self,*args):
         # Only replace the compiler; real policy/file installation runs against this temporary root.
         if args[0]=='sh':

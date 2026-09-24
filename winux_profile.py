@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import shutil
 import tempfile
+import winux_core
 
 ROOT = Path(__file__).resolve().parent
 STATE = 'var/lib/winux-desktop-profile/manifest.json'
@@ -16,7 +17,7 @@ PACKAGES = ['plasma-desktop', 'plasma-workspace', 'plasma-x11-session', 'kwin-x1
             'powerdevil', 'kscreen', 'polkit-kde-agent', 'plasma-integration',
             'kde-gtk-config', 'xdg-desktop-portal-kde', 'kio-extras']
 THEME = {
-    'kdeglobals': '[KDE]\nLookAndFeelPackage[$i]=authui7\nwidgetStyle[$i]=kvantum\nSingleClick=false\n\n[General]\nColorScheme[$i]=Aero\n\n[Icons]\nTheme[$i]=Windows 7 Aero\n',
+    'kdeglobals': '[KDE]\nLookAndFeelPackage[$i]=org.winux7.desktop\nwidgetStyle[$i]=kvantum\nSingleClick=false\n\n[General]\nColorScheme[$i]=Aero\n\n[Icons]\nTheme[$i]=Windows 7 Aero\n',
     'plasmarc': '[Theme]\nname[$i]=Seven-Black\n',
     'kcminputrc': '[Mouse]\ncursorTheme[$i]=aero-drop\n',
     'kwinrc': '[org.kde.kdecoration2]\nlibrary[$i]=org.smod.smod\ntheme[$i]=SMOD\n\n[TabBox]\nLayoutName[$i]=thumbnail_seven\n\n[TabBoxAlternative]\nLayoutName[$i]=flip3d\n',
@@ -94,6 +95,7 @@ def remove(root):
         path = root/relative
         if path.exists() and (path.is_symlink() or digest(path) != record['installed']):
             raise RuntimeError(f'Profile file was edited separately: {path}. Back up and review that edit first.')
+    winux_core.remove(root)
     for relative, record in reversed(list(entries.items())):
         path = root/relative
         if record['original'] is None:
@@ -128,6 +130,12 @@ def install(root, run):
     tx.write('usr/share/winux-setup/desktop-first-login.py', (ROOT/'desktop-first-login.py').read_bytes())
     tx.write('usr/share/winux-setup/welcome.py', (ROOT/'welcome.py').read_bytes())
     tx.write('etc/xdg/autostart/winux-desktop.desktop', '[Desktop Entry]\nType=Application\nName=Winux 7\nExec=python /usr/share/winux-setup/desktop-first-login.py\nOnlyShowIn=KDE;\nX-KDE-autostart-after=panel\n')
+    tx.write('usr/share/winux-setup/winux_core.py', (ROOT/'winux_core.py').read_bytes())
+    tx.write('usr/share/winux-setup/wallpaper.jpg', (ROOT/'wallpaper.jpg').read_bytes())
+    tx.write('usr/share/winux-setup/wallpaper-path', '/'+winux_core.IMAGE+'\n')
+    tx.write('etc/xdg/autostart/winux-wallpaper.desktop', '[Desktop Entry]\nType=Application\nName=Winux 7 desktop background\nExec=/usr/local/bin/winux-control-panel --wallpaper-service\nOnlyShowIn=KDE;\nX-KDE-autostart-after=panel\n')
+    tx.write('etc/pacman.d/hooks/99-winux-desktop-assets.hook', '[Trigger]\nOperation = Install\nOperation = Upgrade\nType = Path\nTarget = usr/share/wallpapers/*\nTarget = usr/share/plasma/look-and-feel/authui7/*\n\n[Action]\nDescription = Maintaining Winux 7 desktop assets\nWhen = PostTransaction\nExec = /usr/bin/python /usr/share/winux-setup/winux_core.py\n')
+    winux_core.refresh(root, ROOT/'wallpaper.jpg')
     for name, content in THEME.items():
         tx.write('etc/winux-7/theme/'+name, content)
     tx.write('etc/winux-7/locked/kdeglobals', LOCKED)

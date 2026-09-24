@@ -57,6 +57,8 @@ class Config:
     confirmation: str = ''
 
     def validate(self):
+        if not self.aero:
+            raise SetupError('Winux 7 requires its desktop. A generic desktop installation is not supported.')
         if not re.fullmatch(r'[a-z_][a-z0-9_-]{0,30}', self.username) or self.username in {'root', 'nobody', 'sddm', 'arch', 'daemon'}:
             raise SetupError('Choose a user name starting with a lowercase letter; use letters, numbers, _ or - (up to 31 characters).')
         if not re.fullmatch(r'[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?', self.hostname):
@@ -255,7 +257,7 @@ class Installer:
             details = self.run('pacman', '-Si', 'plasma-workspace')
             match = re.search(r'^Version\s*:\s*(?:\d+:)?(\d+\.\d+)\.', details, re.M)
             if not match or match.group(1) != '6.7':
-                raise SetupError('Aero currently targets Plasma 6.7. The available package version differs or cannot be verified. No disk has been erased. Choose the standard Plasma option or use compatible repositories.')
+                raise SetupError('Aero currently targets Plasma 6.7. The available package version differs or cannot be verified. No disk has been erased. Use compatible repositories to install the Winux 7 desktop.')
             self.run('git', 'ls-remote', '--exit-code', 'https://github.com/aeroshell-desktop/aerothemeplasma.git', 'refs/heads/Plasma/6.7', timeout=60)
         self.check_disk()
 

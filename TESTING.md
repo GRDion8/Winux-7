@@ -1,6 +1,14 @@
 # Validation and release checklist
 
-## Wallpaper and first-login preparation
+## Core desktop and vendor wallpaper fallback
+
+90 automated tests pass. The new target-root checks verify the dedicated Winux theme package and wallpaper default, preservation of upstream credits, retirement of only package-owned vendor wallpapers, package-update reapplication, idempotence, recovery of the latest vendor originals, manual-edit protection and rejection of symlink escapes. The private D-Bus test now keeps a wallpaper service running and verifies repair after a late reset and a full simulated shell restart, without repeated writes to unchanged wallpaper. The installer rejects generic desktop requests before installation.
+
+Python compilation and shell syntax pass. The graphical installer preview is checked with the generic desktop option removed. This environment lacks the Plasma KPackage structure plugins, so a real KPackage theme load and installed Aero session remain VM acceptance checks. No host wallpaper, packages, login configuration or disks were changed.
+
+VM acceptance: update with `--desktop-profile`, restart repeatedly, verify Winux is the only bundled background, change a personal picture through Control Panel, restart the shell, reconnect a monitor and confirm recovery. Run a normal system update and check that vendor gallery images stay retired and Winux defaults remain active. Verify `--remove-desktop-profile` restores the saved vendor assets if recovery is needed. The real package hook, live shell and ISO build have not been exercised here.
+
+## Wallpaper and first-login preparation (previous revision)
 
 83 automated tests pass for this revision. New checks compile the native wallpaper code and use a real private D-Bus connection to a simulated, locked Plasma service: picture selection/copying, removal of the original picture, restoration after restarting the simulated service, invalid files and rejected changes. This does not prove the actual Aero service behaves identically.
 
@@ -55,7 +63,7 @@ Run `python gui_test.py` under a graphical display or Xvfb for a preview-only wi
 - [ ] Verify no password appears in logs or process arguments.
 - [ ] Test representative Intel/AMD graphics and document NVIDIA requirements.
 
-Use at least 8 GiB RAM and a new 64 GiB virtual disk for the initial build test. Never pass physical disks into the test VM. A successful standard Plasma installation does not validate the optional Aero build. Record ISO date, repository versions, firmware mode, virtual hardware and Aero source revisions with test results; upstream dependencies are not pinned.
+Use at least 8 GiB RAM and a new 64 GiB virtual disk for the initial build test. Never pass physical disks into the test VM. A generic desktop test does not validate the Winux desktop build. Record ISO date, repository versions, firmware mode, virtual hardware and Aero source revisions with test results; upstream dependencies are not pinned.
 
 ## EFI mount regression
 
